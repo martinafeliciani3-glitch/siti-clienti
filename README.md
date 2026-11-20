@@ -1,14 +1,28 @@
 # Feliciani Group Srl – Sito web
 
-Sito a pagina unica in `index.html` (HTML, CSS e JavaScript in un solo file). Basta aprirlo nel browser o caricarlo su qualsiasi hosting.
+Sito a pagina unica dell'impresa di costruzioni Feliciani Group Srl.
+Tutto (HTML, CSS e JavaScript) è nel file `index.html`.
 
-## Da personalizzare prima della pubblicazione
+Indirizzo pubblico: https://martinafeliciani3-glitch.github.io/siti-clienti/
 
-1. **Contatti**: in fondo al file, nell'oggetto `CONFIG`, inserire telefono, numero WhatsApp (es. `393331234567`), email ed eventuale `formEndpoint` (es. Formspree). Senza endpoint il modulo apre un'email precompilata.
-   Aggiornare anche i dati nel blocco JSON-LD nell'`<head>` e la P.IVA nel footer.
-2. **Numeri**: nella sezione `#numeri` modificare gli attributi `data-target` (anni, cantieri, clienti, % consegne).
-3. **Foto prima/dopo**: nella sezione `#lavori` sostituire ogni `<div class="ph ...">…</div>` con `<img src="foto/nome.jpg" alt="descrizione">`.
-4. **Foto squadra**: nella sezione `#perche`, stesso procedimento.
-5. **Foto di sfondo in apertura** (facoltativa): `<section class="hero" id="top" style="--hero-img:url('foto/hero.jpg')">`.
-6. **Recensioni**: sostituire i testi segnaposto con recensioni reali (nome, zona, testo) e aggiornare il voto medio.
-7. **Privacy e cookie policy**: collegare le pagine reali ai link nel footer e nel modulo.
+## Pubblicazione
+
+Il sito si pubblica da solo su GitHub Pages a ogni modifica del branch `main`
+(workflow `.github/workflows/pages.yml`). L'esito si vede nella scheda **Actions**.
+
+Da fare una sola volta: **Settings → Pages → Source: GitHub Actions**.
+
+## Dove modificare i contenuti (in `index.html`)
+
+- **Telefono**: cercare `366 155 7209` e `+393661557209` (compaiono nei contatti e nel riepilogo del modulo).
+- **WhatsApp del modulo**: cercare `wa.me/393661557209`.
+- **Email**: cercare `felicianigrp@gmail.com`.
+- **Sede e P.IVA**: nella sezione contatti e nel footer.
+- **Numeri animati** (sezione "In cifre"): attributi `data-c` (es. `data-c="25"` = anni di attività).
+- **Servizi**: elenco `SV` nello script (titolo, descrizione, etichette).
+- **Testi delle fasi del metodo**: elenco `DS` nello script.
+
+## Librerie esterne
+
+- Three.js 0.128 da jsDelivr (scena 3D del cantiere). Se non si carica, al posto della scena compare uno sfondo sfumato.
+- Font Cormorant Garamond e Manrope da Google Fonts.
