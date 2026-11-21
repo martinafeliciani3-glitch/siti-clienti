@@ -7,6 +7,7 @@ Indirizzo pubblico: https://martinafeliciani3-glitch.github.io/siti-clienti/
 ## File
 
 - `index.html` – struttura e testi della pagina
+- `privacy.html` – informativa sul trattamento dei dati (da far verificare a un consulente)
 - `assets/style.css` – grafica e animazioni CSS
 - `assets/guard.js` – protezioni eseguite per prime (solo HTTPS, niente sito dentro pagine altrui)
 - `assets/app.js` – animazioni, scena 3D, menu, prima/dopo e modulo di richiesta
@@ -18,7 +19,7 @@ Indirizzo pubblico: https://martinafeliciani3-glitch.github.io/siti-clienti/
 
 Il sito si pubblica da solo su GitHub Pages a ogni modifica del branch `main`
 (workflow `.github/workflows/pages.yml`). L'esito si vede nella scheda **Actions**.
-Vengono pubblicati solo `index.html` e la cartella `assets`.
+Vengono pubblicati solo `index.html`, `privacy.html` e la cartella `assets`.
 
 ## Dove modificare i contenuti
 

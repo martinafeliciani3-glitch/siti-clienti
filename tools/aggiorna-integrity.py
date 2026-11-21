@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggiorna (o controlla) gli attributi integrity in index.html.
+"""Aggiorna (o controlla) gli attributi integrity nelle pagine del sito (*.html).
 
 Ogni script e foglio di stile del sito ha un'impronta (hash SHA-384): se il file
 venisse alterato, il browser si rifiuterebbe di usarlo.
@@ -16,7 +16,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PAGE = ROOT / 'index.html'
+PAGES = sorted(ROOT.glob('*.html'))
 TAG = re.compile(
     r'<(script src|link rel="stylesheet" href)="(assets/[^"]+)"(?: integrity="[^"]*")?(?: crossorigin="[^"]*")?>'
 )
@@ -29,24 +29,29 @@ def sri(path):
 
 def main():
     check = '--check' in sys.argv
-    html = PAGE.read_text(encoding='utf-8')
-    found = []
+    errors = []
+    for page in PAGES:
+        html = page.read_text(encoding='utf-8')
+        found = []
 
-    def fix(m):
-        found.append(m.group(2))
-        return f'<{m.group(1)}="{m.group(2)}" integrity="{sri(m.group(2))}">'
+        def fix(m):
+            found.append(m.group(2))
+            return f'<{m.group(1)}="{m.group(2)}" integrity="{sri(m.group(2))}">'
 
-    new = TAG.sub(fix, html)
-    if not found:
-        sys.exit('Nessuno script o foglio di stile trovato in index.html')
-    if check:
-        if new != html:
-            sys.exit('ERRORE: gli attributi integrity in index.html non corrispondono ai file.\n'
-                     'Eseguire: python3 tools/aggiorna-integrity.py')
-        print('Integrity corretti per:', ', '.join(found))
-    else:
-        PAGE.write_text(new, encoding='utf-8')
-        print('Integrity aggiornati per:', ', '.join(found))
+        new = TAG.sub(fix, html)
+        if not found:
+            errors.append(f'{page.name}: nessuno script o foglio di stile trovato')
+            continue
+        if check:
+            if new != html:
+                errors.append(f'{page.name}: gli attributi integrity non corrispondono ai file')
+            else:
+                print(f'{page.name}: integrity corretti per', ', '.join(found))
+        else:
+            page.write_text(new, encoding='utf-8')
+            print(f'{page.name}: integrity aggiornati per', ', '.join(found))
+    if errors:
+        sys.exit('ERRORE:\n' + '\n'.join(errors) + '\nEseguire: python3 tools/aggiorna-integrity.py')
 
 
 if __name__ == '__main__':
