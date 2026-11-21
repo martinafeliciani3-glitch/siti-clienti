@@ -5,23 +5,19 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Permessi minimi: il workflow può solo leggere il codice e pubblicare su Pages
+# Permessi minimi di default: solo lettura del codice
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # 1) Prepara e carica i file del sito
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       # Azioni bloccate su una versione esatta (commit) per evitare manomissioni
       - name: Scarica il codice
@@ -36,13 +32,25 @@ jobs:
           cp index.html _site/
           cp -r assets _site/
 
-      - name: Configura Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-
       - name: Carica il sito
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
+
+  # 2) Pubblica su GitHub Pages (job separato: i file caricati sono già disponibili)
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configura Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Pubblica
         id: deployment
