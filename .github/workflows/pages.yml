@@ -25,7 +25,11 @@ jobs:
         with:
           persist-credentials: false
 
-      # Pubblica solo i file del sito: niente README, workflow o altri file del repository
+      # Blocca la pubblicazione se le impronte "integrity" non corrispondono ai file
+      - name: Controlla integrity
+        run: python3 tools/aggiorna-integrity.py --check
+
+      # Pubblica solo i file del sito: niente README, workflow, strumenti o altri file del repository
       - name: Prepara i file del sito
         run: |
           mkdir -p _site

@@ -6,8 +6,11 @@ Indirizzo pubblico: https://martinafeliciani3-glitch.github.io/siti-clienti/
 
 ## File
 
-- `index.html` – struttura, testi e stile della pagina
+- `index.html` – struttura e testi della pagina
+- `assets/style.css` – grafica e animazioni CSS
+- `assets/guard.js` – protezioni eseguite per prime (solo HTTPS, niente sito dentro pagine altrui)
 - `assets/app.js` – animazioni, scena 3D, menu, prima/dopo e modulo di richiesta
+- `tools/aggiorna-integrity.py` – ricalcola le impronte di sicurezza (`integrity`) dei file
 - `assets/three.min.js` – libreria Three.js 0.128 per la scena 3D (licenza in `assets/three.LICENSE.txt`)
 - `assets/fonts/` – font Cormorant Garamond e Manrope (licenza SIL OFL, file `OFL-*.txt`)
 
@@ -31,13 +34,23 @@ Vengono pubblicati solo `index.html` e la cartella `assets`.
 
 - Il sito non carica nulla da altri siti: font, librerie e immagini sono tutti nel repository.
   Nessun cookie, nessun tracciamento, nessun dato inviato a terzi durante la navigazione.
-- `index.html` contiene una **Content Security Policy**: il browser esegue solo script e font
-  provenienti dal sito stesso e blocca tutto il resto (script iniettati, plugin, moduli verso altri siti).
-- **Regola importante**: non inserire script dentro `index.html` (`<script>…</script>`) né caricare
-  script, font o immagini da altri siti: verrebbero bloccati. Il codice va in `assets/app.js`,
-  i file nella cartella `assets/`. Se serve un servizio esterno (es. Google Maps incorporata, analytics),
-  va prima aggiunto alla regola `Content-Security-Policy` in cima a `index.html`.
-- I dati del modulo non passano da nessun server: la richiesta viene inviata dall'utente
-  tramite WhatsApp o email.
+- `index.html` contiene una **Content Security Policy** molto severa: il browser accetta solo
+  script, stili e font del sito stesso e blocca tutto il resto (script iniettati, stili scritti
+  dentro l'HTML, plugin, moduli verso altri siti, inserimento di HTML non autorizzato).
+- Ogni script e il foglio di stile hanno un'impronta **integrity**: se un file venisse alterato,
+  il browser non lo userebbe.
+- **Regole importanti per le modifiche:**
+  - niente `<script>…</script>`, `<style>…</style>` o attributi `style="…"` dentro `index.html`:
+    verrebbero bloccati. Il codice va in `assets/app.js`, la grafica in `assets/style.css`;
+  - dopo aver modificato un file in `assets/` eseguire `python3 tools/aggiorna-integrity.py`.
+    Se ci si dimentica, la pubblicazione automatica si ferma con un errore invece di mettere
+    online un sito rotto;
+  - per usare un servizio esterno (mappa incorporata, statistiche…) va prima aggiunto alla
+    regola `Content-Security-Policy` in cima a `index.html`.
+- Modulo contatti: campi con limiti di lunghezza, nome e telefono controllati, testo ripulito
+  da caratteri nascosti e simboli `< >`, scelte accettate solo dall'elenco previsto, campo
+  nascosto anti-bot e blocco delle compilazioni troppo veloci. I dati non passano da nessun
+  server: la richiesta viene inviata dall'utente tramite WhatsApp o email.
+- Il sito funziona solo in HTTPS e non può essere mostrato dentro pagine di altri siti.
 - Il workflow di pubblicazione ha permessi minimi e usa azioni bloccate su una versione esatta.
   Dependabot (`.github/dependabot.yml`) propone ogni settimana gli aggiornamenti di sicurezza.

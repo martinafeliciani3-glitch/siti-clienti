@@ -6,9 +6,13 @@ const ss=t=>{t=clamp(t);return t*t*t*(t*(t*6-15)+10)};
 const eo=t=>1-Math.pow(1-clamp(t),4);
 const isMob=matchMedia('(max-width:900px)').matches;
 let readyT=null;
+/* Trusted Types: solo questa funzione puo' scrivere HTML nella pagina, e solo con contenuti fissi del sito */
+const TT=window.trustedTypes&&trustedTypes.createPolicy?trustedTypes.createPolicy('fg',{createHTML:x=>x}):null;
+const html=x=>TT?TT.createHTML(x):x;
+const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 /* ---------- LOADER ---------- */
-const nm='Feliciani Group';$('#lname').innerHTML=[...nm].map((c,i)=>`<span style="animation-delay:${i*.04}s">${c===' '?'&nbsp;':c}</span>`).join('');
+const nm='Feliciani Group',lnm=$('#lname');[...nm].forEach((c,i)=>{const sp=document.createElement('span');sp.style.animationDelay=i*.04+'s';sp.textContent=c===' '?'\u00a0':c;lnm.appendChild(sp)});
 let lp=0;const lpc=$('#lpc'),lbar=$('#lbar');
 const lt=setInterval(()=>{lp=Math.min(100,lp+1+Math.random()*4);lpc.textContent=String(Math.floor(lp)).padStart(3,'0');lbar.style.width=lp+'%';
   if(lp>=100){clearInterval(lt);setTimeout(()=>{$('#loader').classList.add('done');document.body.classList.remove('loading');document.body.classList.add('ready');readyT=performance.now()/1000},350)}},40);
@@ -31,10 +35,10 @@ matchMedia('(min-width:901px)').addEventListener('change',e=>{if(e.matches)setMe
 /* ---------- REVEAL ---------- */
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');const c=e.target.querySelector('[data-c]');if(c)count(c);io.unobserve(e.target)}}),{threshold:.18});
 $$('.rv').forEach(el=>io.observe(el));
-function count(el){const t=+el.dataset.c,s=el.dataset.s||'',t0=performance.now();(function f(n){const k=eo((n-t0)/2600);el.innerHTML=Math.round(t*k)+(s?`<sup>${s}</sup>`:'');if(k<1)requestAnimationFrame(f)})(t0)}
+function count(el){const t=+el.dataset.c,s=el.dataset.s||'',t0=performance.now();(function f(n){const k=eo((n-t0)/2600);el.textContent=Math.round(t*k);if(s){const su=document.createElement('sup');su.textContent=s;el.appendChild(su)}if(k<1)requestAnimationFrame(f)})(t0)}
 
 /* ---------- MANIFESTO ---------- */
-const mf=$('#manif');mf.innerHTML=mf.textContent.split(' ').map(w=>`<span>${w}</span> `).join('');const mws=[...mf.children];
+const mf=$('#manif'),mfw=mf.textContent.split(' ');mf.textContent='';mfw.forEach(w=>{const sp=document.createElement('span');sp.textContent=w;mf.append(sp,' ')});const mws=[...mf.children];
 
 /* ---------- SERVIZI ---------- */
 const SV=[
@@ -45,8 +49,8 @@ const SV=[
  ['Opere strutturali','Fondazioni, strutture in cemento armato e opere di consolidamento eseguite da squadre specializzate.',['Cemento armato','Fondazioni','Consolidamento']]
 ];
 const acc=$('#acc');SV.forEach((s,i)=>{const d=document.createElement('div');d.className='it'+(i===0?' open':'');
-  d.innerHTML=`<button><span class="n">0${i+1}</span><span class="t">${s[0]}</span><span class="pl"></span></button><div class="body"><div><div class="inner"><p>${s[1]}</p><div class="tags">${s[2].map(t=>`<span>${t}</span>`).join('')}</div></div></div></div>`;
-  d.querySelector('button').onclick=()=>{const o=d.classList.contains('open');$$('.it').forEach(x=>x.classList.remove('open'));if(!o)d.classList.add('open')};acc.appendChild(d)});
+  d.innerHTML=html(`<button type="button" aria-expanded="${i===0}"><span class="n">0${i+1}</span><span class="t">${esc(s[0])}</span><span class="pl"></span></button><div class="body"><div><div class="inner"><p>${esc(s[1])}</p><div class="tags">${s[2].map(t=>`<span>${esc(t)}</span>`).join('')}</div></div></div></div>`);
+  d.querySelector('button').onclick=()=>{const o=d.classList.contains('open');$$('.it').forEach(x=>{x.classList.remove('open');x.querySelector('button').setAttribute('aria-expanded','false')});if(!o){d.classList.add('open');d.querySelector('button').setAttribute('aria-expanded','true')}};acc.appendChild(d)});
 
 /* =================== THREE =================== */
 const T=window.THREE;
@@ -411,7 +415,7 @@ function house(af){const id=af?'a':'b',wall=af?'#efe4d0':'#b5a084',trim=af?'#f8f
   s+=af?`<rect y="480" width="1000" height="60" fill="#5b7148"/><path d="M430 480H570L600 540H400Z" fill="#d9cfbd"/><path d="M230 480c20-26 60-26 80 0M640 480c20-28 70-28 100 0" fill="#3f5a35"/>`
     :`<rect y="480" width="1000" height="60" fill="#6c624f"/><path d="M240 480l6-16 4 16 6-22 4 22M700 480l5-14 5 14 4-20 4 20M380 480l4-12 3 12" stroke="#5c6644" stroke-width="2" fill="none"/>`;
   s+=`<rect width="1000" height="540" fill="url(#lt${id})"/></svg>`;return s}
-$('#baB').innerHTML=house(false);$('#baA').innerHTML=house(true);
+$('#baB').innerHTML=html(house(false));$('#baA').innerHTML=html(house(true));
 (function(){const ba=$('#ba'),af=$('#baA'),h=$('#bah');let dr=false,auto=true,cur=.5,tgt=.5;
   const set=k=>{af.style.clipPath=`inset(0 0 0 ${k*100}%)`;h.style.left=k*100+'%'};
   const pos=x=>{const r=ba.getBoundingClientRect();return clamp((x-r.left)/r.width,.02,.98)};
@@ -422,15 +426,45 @@ $('#baB').innerHTML=house(false);$('#baA').innerHTML=house(true);
 })();
 
 /* ---------- FORM ---------- */
-(function(){let s=0;const qs=$$('.qs'),nf=$('#qf'),nb=$('#qb'),q={tipo:'',when:'Appena possibile',mq:120};
-  const pick=(id,k)=>$$(id+' button').forEach(b=>b.onclick=()=>{$$(id+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');q[k]=b.textContent});
-  pick('#c-tipo','tipo');pick('#c-when','when');
-  $('#mqr').oninput=e=>{q.mq=+e.target.value;$('#mqv').textContent=q.mq.toLocaleString('it-IT')};
+(function(){let s=0,t3=0;const qs=$$('.qs'),nf=$('#qf'),nb=$('#qb'),q={tipo:'',when:'Appena possibile',mq:120};
+  const TIPI=['Nuova costruzione','Ristrutturazione completa','Ristrutturazione parziale','Edificio commerciale','Efficientamento energetico','Altro'];
+  const QUANDO=['Appena possibile','Entro sei mesi','Sto valutando'];
+  const LIM={qn:80,qp:20,qt:500};
+  /* Ripulisce il testo inserito: toglie caratteri di controllo e invisibili, i simboli < >,
+     normalizza gli spazi e taglia alla lunghezza massima */
+  const clean=(v,max,multi)=>{v=String(v||'').normalize('NFC')
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u00AD\u200B-\u200F\u2028-\u202E\u2060-\u2069\uFEFF]/g,'')
+      .replace(/[<>]/g,'');
+    v=multi?v.replace(/\r\n?/g,'\n').replace(/[ \t]+/g,' ').replace(/ ?\n ?/g,'\n').replace(/\n{3,}/g,'\n\n'):v.replace(/\s+/g,' ');
+    return v.trim().slice(0,max)};
+  const okName=v=>v.length>=2&&v.length<=LIM.qn&&/^[\p{L}][\p{L}\p{M}'’ .-]*$/u.test(v);
+  const okPhone=v=>{const d=v.replace(/\D/g,'');return /^\+?[0-9 ()./-]+$/.test(v)&&d.length>=6&&d.length<=15};
+  const fld=id=>$(id),mark=(el,bad)=>el.setAttribute('aria-invalid',bad?'true':'false');
+  /* i campi non accettano piu' caratteri del limite, anche se incollati */
+  [['#qn',LIM.qn],['#qp',LIM.qp],['#qt',LIM.qt]].forEach(([id,m])=>{const el=fld(id);
+    el.addEventListener('input',()=>{if(el.value.length>m)el.value=el.value.slice(0,m);if(el.getAttribute('aria-invalid')==='true')mark(el,false)});
+    el.addEventListener('blur',()=>{el.value=clean(el.value,m,id==='#qt')})});
+  const pick=(id,k,list)=>$$(id+' button').forEach(b=>{b.type='button';b.onclick=()=>{const v=b.textContent.trim();if(!list.includes(v))return;
+    $$(id+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');q[k]=v}});
+  pick('#c-tipo','tipo',TIPI);pick('#c-when','when',QUANDO);
+  $('#mqr').oninput=e=>{q.mq=Math.round(clamp(+e.target.value||120,20,2000)/10)*10;$('#mqv').textContent=q.mq.toLocaleString('it-IT')};
   const shake=el=>el.animate([{transform:'translateX(0)'},{transform:'translateX(-7px)'},{transform:'translateX(7px)'},{transform:'translateX(0)'}],{duration:380,easing:'ease-out'});
-  function show(){qs.forEach((x,i)=>x.classList.toggle('on',i===s));$('#pg').style.width=Math.min(100,(s+1)*33.34)+'%';nb.style.visibility=s>0&&s<3?'visible':'hidden';$('#qnav').style.display=s===3?'none':'flex';nf.querySelector('span').textContent=s===2?'Vedi riepilogo':'Continua →'}
-  nf.onclick=()=>{if(s===0&&!q.tipo)return shake($('#c-tipo'));
-    if(s===2){const n=$('#qn').value.trim(),p=$('#qp').value.trim();if(!n)return shake($('#qn').parentNode);if(p.replace(/\D/g,'').length<6)return shake($('#qp').parentNode);
-      const nt=$('#qt').value.trim();$('#sum').textContent=`Intervento: ${q.tipo}\nSuperficie: ${q.mq.toLocaleString('it-IT')} m²\nTempistica: ${q.when}\nNome: ${n}\nTelefono: ${p}${nt?'\nNote: '+nt:''}`;const tx='Richiesta preventivo dal sito\n\n'+$('#sum').textContent;$('#qwa').href='https://wa.me/393661557209?text='+encodeURIComponent(tx);$('#qmail').href='mailto:felicianigrp@gmail.com?subject='+encodeURIComponent('Richiesta preventivo - '+n)+'&body='+encodeURIComponent(tx)}
+  function show(){qs.forEach((x,i)=>x.classList.toggle('on',i===s));$('#pg').style.width=Math.min(100,(s+1)*33.34)+'%';nb.style.visibility=s>0&&s<3?'visible':'hidden';$('#qnav').style.display=s===3?'none':'flex';nf.querySelector('span').textContent=s===2?'Vedi riepilogo':'Continua →';if(s===2&&!t3)t3=performance.now()}
+  nf.onclick=()=>{if(s===0&&!TIPI.includes(q.tipo))return shake($('#c-tipo'));
+    if(s===2){
+      /* anti-spam: campo nascosto compilato o compilazione troppo veloce = bot, la richiesta non viene preparata */
+      if(fld('#qw').value!==''||performance.now()-t3<2500)return;
+      const ni=fld('#qn'),pi=fld('#qp'),ti=fld('#qt');
+      const n=clean(ni.value,LIM.qn),p=clean(pi.value,LIM.qp),nt=clean(ti.value,LIM.qt,true);
+      ni.value=n;pi.value=p;ti.value=nt;
+      if(!okName(n)){mark(ni,true);ni.focus();return shake(ni.parentNode)}mark(ni,false);
+      if(!okPhone(p)){mark(pi,true);pi.focus();return shake(pi.parentNode)}mark(pi,false);
+      const tipo=TIPI.includes(q.tipo)?q.tipo:'Altro',when=QUANDO.includes(q.when)?q.when:QUANDO[0],mq=Math.round(clamp(q.mq,20,2000));
+      /* il riepilogo e' inserito come testo semplice, mai come HTML */
+      $('#sum').textContent=`Intervento: ${tipo}\nSuperficie: ${mq.toLocaleString('it-IT')} m²\nTempistica: ${when}\nNome: ${n}\nTelefono: ${p}${nt?'\nNote: '+nt:''}`;
+      const tx='Richiesta preventivo dal sito\n\n'+$('#sum').textContent;
+      $('#qwa').href='https://wa.me/393661557209?text='+encodeURIComponent(tx);
+      $('#qmail').href='mailto:felicianigrp@gmail.com?subject='+encodeURIComponent('Richiesta preventivo - '+n)+'&body='+encodeURIComponent(tx)}
     s++;show()};
   nb.onclick=()=>{s=Math.max(0,s-1);show()};
   })();
