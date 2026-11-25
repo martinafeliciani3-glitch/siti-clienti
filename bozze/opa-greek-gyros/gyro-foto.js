@@ -8,7 +8,8 @@
   'use strict';
   var stage = document.getElementById('scene');
   var sec = document.getElementById('build');
-  if (!stage || !sec) return;
+  // se la scena 3D è partita, questa versione fotografica non serve
+  if (!stage || !sec || window.__3DOK) return;
 
   // percorso delle immagini (nella versione in un unico file arrivano già incorporate)
   var src = function (n) { return (window.__IMG && window.__IMG[n]) || ('img/' + n + '.webp'); };

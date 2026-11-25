@@ -9,3 +9,7 @@ sostituite con foto reali del ristorante.
 
 ## Font
 - Fraunces e Manrope – SIL Open Font License (file `fonts/OFL-*.txt`).
+
+## 3D
+- Le mappe di rilievo e di luce (`img/3d/`) sono calcolate dalle foto; la scena usa
+  Three.js 0.128 (licenza MIT, `three.LICENSE.txt`).
