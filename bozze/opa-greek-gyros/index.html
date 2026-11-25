@@ -105,6 +105,60 @@ p{margin:0}
   .hero-art{justify-self:center;max-width:360px}
 }
 
+/* scena 3D nell'apertura */
+.hero-art canvas{position:absolute;inset:-14%;width:128%;height:128%;display:block;transition:opacity .3s}
+.has3d .plate{display:none}
+.hero-art .stamp,.hero-art .price-tag{z-index:2}
+
+/* sezione "come nasce il tuo gyros" */
+.build{position:relative;height:440vh;background:radial-gradient(70% 60% at 70% 45%,#1d4f95 0%,#0f2d5c 55%,#0b1f40 100%);color:#fff}
+.build-stick{position:sticky;top:0;height:100vh;height:100svh;display:grid;grid-template-columns:minmax(300px,36%) 1fr;overflow:hidden}
+.build-side{position:relative;z-index:2;padding:110px 3vw 60px max(var(--pad),5vw);display:flex;flex-direction:column;justify-content:center}
+.build .kicker{color:var(--lemon)}
+.build .title{font-size:clamp(34px,4.2vw,58px)}
+.build .title em{color:var(--lemon)}
+.steps{list-style:none;margin:34px 0 0;padding:0;counter-reset:s}
+.steps li{position:relative;padding:12px 0 12px 46px;border-top:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.42);transition:color .6s var(--e)}
+.steps li::before{counter-increment:s;content:"0" counter(s);position:absolute;left:0;top:14px;font-size:12px;font-weight:700;letter-spacing:.12em}
+.steps li b{display:block;font-family:var(--display);font-size:22px;font-weight:600;transition:transform .7s var(--e)}
+.steps li span{display:block;max-height:0;overflow:hidden;font-size:14.5px;color:rgba(255,255,255,.75);transition:max-height .7s var(--e),margin .7s var(--e)}
+.steps li.on{color:#fff}
+.steps li.on b{transform:translateX(6px);font-style:italic}
+.steps li.on::before{color:var(--lemon)}
+.steps li.on span{max-height:60px;margin-top:4px}
+.steps li.done{color:rgba(255,255,255,.7)}
+.bbar{height:3px;background:rgba(255,255,255,.14);border-radius:3px;margin-top:22px;overflow:hidden}
+.bbar i{display:block;height:100%;background:var(--lemon);transform-origin:left;transform:scaleX(0)}
+.build-stage{position:relative}
+.build-stage canvas{position:absolute;left:0;top:72px;width:100%;height:calc(100% - 72px);display:block}
+.build-cap{position:absolute;left:28px;bottom:26px;z-index:2;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+.build-cap b{display:block;font-family:var(--display);font-size:30px;letter-spacing:0;text-transform:none;color:#fff}
+.opa-pop{position:absolute;left:50%;top:12%;z-index:2;font-family:var(--display);font-style:italic;font-weight:600;font-size:clamp(56px,9vw,120px);color:var(--lemon);text-shadow:0 10px 40px rgba(0,0,0,.35);transform:translateX(-50%) scale(.3) rotate(-14deg);opacity:0;transition:transform .7s cubic-bezier(.34,1.56,.64,1),opacity .4s;pointer-events:none}
+.opa-pop.on{opacity:1;transform:translateX(-50%) scale(1) rotate(-6deg)}
+.build-hint{position:absolute;right:28px;bottom:28px;z-index:2;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.6);animation:hint 2s ease-in-out infinite}
+@keyframes hint{50%{transform:translateY(6px)}}
+.no3d .build{display:none}
+@media(max-width:820px){
+  .build-stick{grid-template-columns:1fr;grid-template-rows:56% 44%}
+  .build-stage{grid-row:1}
+  .build-side{grid-row:2;padding:16px var(--pad) 18px;justify-content:flex-start}
+  .build .kicker,.build .title{display:none}
+  .steps{margin-top:0;display:flex;gap:4px}
+  .steps li{flex:1;padding:10px 0 0;border-top:3px solid rgba(255,255,255,.14)}
+  .steps li::before{position:static;display:block}
+  .steps li b,.steps li span{display:none}
+  .steps li.on{border-top-color:var(--lemon)}
+  .steps li.done{border-top-color:rgba(246,196,69,.45)}
+  .step-now{display:block!important}
+  .build-cap{left:var(--pad);bottom:auto;top:84px}.build-cap b{font-size:22px}
+  .opa-pop{top:20%;left:auto;right:5%;font-size:58px;transform:scale(.3) rotate(-14deg)}
+  .opa-pop.on{transform:scale(1) rotate(-8deg)}
+  .build-hint{display:none}
+}
+.step-now{display:none;margin-top:12px}
+.step-now b{display:block;font-family:var(--display);font-size:24px;font-weight:600;font-style:italic}
+.step-now span{display:block;font-size:14.5px;color:rgba(255,255,255,.78);margin-top:2px}
+
 /* segnaposto foto */
 .ph{position:relative;display:grid;place-items:center;text-align:center;color:rgba(16,33,63,.55);font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   background:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 2px,transparent 2px 14px),linear-gradient(140deg,#f6d58a,#e9a55b 55%,#c8553d)}
@@ -245,6 +299,7 @@ footer .logo b i{color:var(--lemon)}
       <div class="feats"><span>Sul posto</span><span>Asporto</span><span>A domicilio</span><span>Opzioni vegetariane</span></div>
     </div>
     <div class="hero-art" aria-hidden="true">
+      <canvas id="gyro-hero"></canvas>
       <div class="plate"><div class="ph"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>Foto del gyros</div></div></div>
       <div class="stamp"><div>Ricette<br>greche<small>di famiglia</small></div></div>
       <div class="price-tag">Pita gyros da<strong>7 €</strong></div>
@@ -255,13 +310,39 @@ footer .logo b i{color:var(--lemon)}
   </div>
 </section>
 
+<!-- COME NASCE IL TUO GYROS (3D guidato dallo scorrimento) -->
+<section class="build" id="build" aria-label="Come nasce il tuo gyros">
+  <div class="build-stick">
+    <div class="build-side">
+      <span class="kicker">Come nasce il tuo gyros</span>
+      <h2 class="title">Scorri e guardalo <em>prendere forma.</em></h2>
+      <ol class="steps" id="steps">
+        <li class="on"><b>Pita calda</b><span>Pane pita morbido, scaldato sulla piastra.</span></li>
+        <li><b>Pollo marinato</b><span>Pollo marinato e grigliato, a striscioline.</span></li>
+        <li><b>Verdure fresche</b><span>Insalata, pomodori e cipolla.</span></li>
+        <li><b>Patatine</b><span>Dentro la pita, come si fa in Grecia.</span></li>
+        <li><b>Tzatziki</b><span>Yogurt, cetriolo e aglio: la salsa greca per eccellenza.</span></li>
+        <li><b>Si chiude. Opa!</b><span>Avvolta nella carta, pronta da mordere.</span></li>
+      </ol>
+      <div class="step-now" id="stepNow"><b>Pita calda</b><span>Pane pita morbido, scaldato sulla piastra.</span></div>
+      <div class="bbar"><i id="buildBar"></i></div>
+    </div>
+    <div class="build-stage">
+      <canvas id="gyro-build"></canvas>
+      <div class="opa-pop" id="opaPop" aria-hidden="true">Opa!</div>
+      <div class="build-cap">Gyro Classica<b>8 €</b></div>
+      <div class="build-hint" aria-hidden="true">Scorri ↓</div>
+    </div>
+  </div>
+</section>
+
 <!-- GYROS IN EVIDENZA -->
 <section class="section" id="gyros">
   <div class="wrap">
     <div class="rv">
       <span class="kicker">I nostri gyros</span>
       <h2 class="title">Sette pita, <em>una per ogni fame.</em></h2>
-      <p class="lead">Pane pita caldo, pollo marinato e salse fatte da noi. Eccone quattro: le altre le trovi nel menu.</p>
+      <p class="lead">Pane pita caldo, pollo marinato e salse greche. Eccone quattro: le altre le trovi nel menu.</p>
     </div>
     <div class="gyros-grid">
       <article class="g-card star rv" style="--d:0s">
@@ -380,7 +461,7 @@ footer .logo b i{color:var(--lemon)}
     <div class="rv">
       <span class="kicker">Chi siamo</span>
       <h2 class="title">Una famiglia, <em>la cucina di strada greca.</em></h2>
-      <p class="lead">OPA Greek Gyros è un piccolo locale a conduzione familiare nel quartiere Monte Sacro. Cuciniamo come si fa in Grecia: pollo marinato, pita calda, salse preparate da noi e porzioni generose, a prezzi onesti.</p>
+      <p class="lead">OPA Greek Gyros è un piccolo locale a conduzione familiare nel quartiere Monte Sacro. Cuciniamo come si fa in Grecia: pollo marinato, pita calda, salse greche e porzioni generose, a prezzi onesti.</p>
       <div class="points">
         <div class="point"><b>Ricette greche</b><span>Tzatziki, tirokafteri, moussaka e dolmades come in Grecia</span></div>
         <div class="point"><b>Da 5 €</b><span>Street food buono, a prezzi da tutti i giorni</span></div>
@@ -445,15 +526,26 @@ footer .logo b i{color:var(--lemon)}
   <a class="btn btn-lemon" href="#menu">Menu</a>
 </div>
 
+<script src="three.min.js"></script>
+<script src="gyro3d.js"></script>
 <script>
 (function(){
   'use strict';
   var $=function(s){return document.querySelector(s)}, $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
 
+  /* senza 3D (WebGL non disponibile) la sezione a scorrimento si nasconde */
+  if(!document.documentElement.classList.contains('has3d'))document.documentElement.classList.add('no3d');
+
+  /* testo del passo attuale su telefono */
+  var now=$('#stepNow');
+  if(now&&'MutationObserver' in window){
+    new MutationObserver(function(){var li=document.querySelector('#steps li.on');if(li)now.innerHTML=li.innerHTML}).observe($('#steps'),{subtree:true,attributes:true,attributeFilter:['class']});
+  }
+
   /* header */
   var hdr=$('#hdr');
   var bar=$('.callbar'),hero=$('.hero');
-  function onScroll(){hdr.classList.toggle('solid',window.scrollY>20);bar.classList.toggle('show',hero.getBoundingClientRect().bottom<80)}
+  function onScroll(){hdr.classList.toggle('solid',window.scrollY>20);var bs=document.getElementById('build'),br=bs?bs.getBoundingClientRect():null;bar.classList.toggle('show',hero.getBoundingClientRect().bottom<80&&!(br&&br.top<=1&&br.bottom>=innerHeight-1))}
   addEventListener('scroll',onScroll,{passive:true});onScroll();
 
   /* comparsa allo scorrimento */
