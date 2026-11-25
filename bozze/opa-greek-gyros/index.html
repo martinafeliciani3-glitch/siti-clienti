@@ -187,9 +187,13 @@ p{margin:0}
 .ph-scene::before{content:"";position:absolute;width:min(78vmin,720px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(246,196,69,.16),rgba(246,196,69,0) 62%);top:50%;left:50%;transform:translate(-50%,-48%)}
 .ph-table{position:relative;width:min(62vmin,600px);aspect-ratio:1;transform-style:preserve-3d;will-change:transform}
 .ph-pita{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
-.ph-pita>img:first-child{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(14px 26px 26px rgba(4,12,30,.55))}
+.ph-pita>.ph-ptop{position:absolute;inset:0;width:100%;height:100%;transform:translateZ(0);filter:drop-shadow(14px 26px 26px rgba(4,12,30,.55))}
+.ph-pedge{position:absolute;inset:0;width:100%;height:100%;transform:translateZ(calc(var(--k) * var(--pt,2px) * -1));filter:brightness(calc(.75 - var(--k) * .05)) saturate(1.15)}
 .ph-glow{position:absolute;inset:4%;border-radius:50%;background:radial-gradient(circle,rgba(255,150,60,.55),rgba(255,120,40,0) 70%);mix-blend-mode:overlay;opacity:0;pointer-events:none}
-.ph-item{position:absolute;height:auto;opacity:0;will-change:transform,filter;pointer-events:none;user-select:none}
+.ph-item{position:absolute;opacity:0;transform-style:preserve-3d;will-change:transform;pointer-events:none;user-select:none}
+.ph-item img{display:block;width:100%;height:auto;transform:translateZ(calc(var(--k) * var(--t,2px)))}
+.ph-item .ph-edge{position:absolute;left:0;top:0;filter:brightness(calc(.5 + var(--k) * .08)) saturate(1.2)}
+.ph-item .ph-top{position:relative;will-change:filter}
 .ph-steam{position:absolute;left:50%;top:22%;width:min(40vmin,360px);height:min(40vmin,360px);transform:translateX(-50%);pointer-events:none;opacity:0}
 .ph-steam i:nth-child(1){left:6%;animation-delay:0s}.ph-steam i:nth-child(2){left:30%;animation-delay:1.1s}.ph-steam i:nth-child(3){left:52%;animation-delay:2.2s}.ph-steam i:nth-child(4){left:20%;animation-delay:3.3s}.ph-steam i:nth-child(5){left:44%;animation-delay:4.4s}
 .ph-final{position:absolute;inset:0;opacity:0;overflow:hidden}
@@ -204,7 +208,6 @@ p{margin:0}
 }
 
 /* fasi con video reali */
-.build .ph-stage{top:0;height:100%;background:#0b1f40}
 .vl{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;overflow:hidden}
 .vl.on{opacity:1}
 .vl video,.vl img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;will-change:transform}
@@ -317,7 +320,7 @@ footer .logo b i{color:var(--lemon)}
 </head>
 <body>
 
-<div class="draft">Bozza dimostrativa per <b>OPA Greek Gyros</b> – video da Pexels e foto generate con IA a scopo dimostrativo, da sostituire con riprese del locale</div>
+<div class="draft">Bozza dimostrativa per <b>OPA Greek Gyros</b> – immagini generate con IA a scopo dimostrativo, da sostituire con foto reali</div>
 
 <header class="hdr" id="hdr">
   <div class="wrap">
@@ -373,10 +376,10 @@ footer .logo b i{color:var(--lemon)}
       <h2 class="title">Scorri e guardalo <em>prendere forma.</em></h2>
       <ol class="steps" id="steps">
         <li class="on"><b>Pita calda</b><span>Pane pita morbido, scaldato al momento.</span></li>
-        <li><b>Pollo marinato</b><span>Cotto lentamente e tagliato sottile.</span></li>
+        <li><b>Pollo marinato</b><span>Grigliato e tagliato a strisce.</span></li>
         <li><b>Verdure fresche</b><span>Pomodori, cipolla e insalata, tagliati freschi.</span></li>
         <li><b>Patatine</b><span>Dorate e croccanti, dentro la pita come in Grecia.</span></li>
-        <li><b>Salsa</b><span>Tzatziki cremoso: yogurt, cetriolo e aglio.</span></li>
+        <li><b>Tzatziki</b><span>Cremoso: yogurt, cetriolo e aglio.</span></li>
         <li><b>Si chiude. Opa!</b><span>Avvolta nella carta, pronta da mordere.</span></li>
       </ol>
       <div class="step-now" id="stepNow"><b>Pita calda</b><span>Pane pita morbido, scaldato al momento.</span></div>
@@ -573,7 +576,6 @@ footer .logo b i{color:var(--lemon)}
   <div class="wrap">
     <a href="#top" class="logo"><b>OPA<i>!</i></b></a>
     <span>OPA Greek Gyros · Via delle Vigne Nuove 100, 00139 Roma · P.IVA [da inserire]</span>
-    <span class="credits">Video dimostrativi: Pexels (Ammad Rasool, OHXZONE, Meaw Zara, Ron Lach, Hoàng Thanh Hòa, RDNE Stock project)</span>
   </div>
 </footer>
 
@@ -582,7 +584,7 @@ footer .logo b i{color:var(--lemon)}
   <a class="btn btn-lemon" href="#menu">Menu</a>
 </div>
 
-<script src="gyro-video.js"></script>
+<script src="gyro-foto.js"></script>
 <script>
 (function(){
   'use strict';

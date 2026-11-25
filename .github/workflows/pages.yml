@@ -29,12 +29,15 @@ jobs:
       - name: Controlla integrity
         run: python3 tools/aggiorna-integrity.py --check
 
-      # Pubblica solo i file del sito: niente README, workflow, strumenti o altri file del repository
+      # Pubblica solo i file del sito e la bozza OPA: niente README, workflow o strumenti
       - name: Prepara i file del sito
         run: |
           mkdir -p _site
           cp index.html privacy.html _site/
           cp -r assets _site/
+          # bozza dimostrativa per OPA Greek Gyros (pagina con noindex)
+          mkdir -p _site/bozze
+          cp -r bozze/opa-greek-gyros _site/bozze/
 
       - name: Carica il sito
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
