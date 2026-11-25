@@ -203,6 +203,15 @@ p{margin:0}
   .ph-final img{object-position:60% 40%}
 }
 
+/* fasi con video reali */
+.build .ph-stage{top:0;height:100%;background:#0b1f40}
+.vl{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;overflow:hidden}
+.vl.on{opacity:1}
+.vl video,.vl img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;will-change:transform}
+.vl::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(5,14,30,.55) 100%),linear-gradient(0deg,rgba(9,28,60,.55),transparent 32%);pointer-events:none}
+@media(min-width:821px){.vl::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(11,31,64,.55),transparent 22%);pointer-events:none}}
+.credits{opacity:.6;font-size:12.5px}
+
 /* segnaposto foto */
 .ph{position:relative;display:grid;place-items:center;text-align:center;color:rgba(16,33,63,.55);font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   background:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 2px,transparent 2px 14px),linear-gradient(140deg,#f6d58a,#e9a55b 55%,#c8553d)}
@@ -308,7 +317,7 @@ footer .logo b i{color:var(--lemon)}
 </head>
 <body>
 
-<div class="draft">Bozza dimostrativa per <b>OPA Greek Gyros</b> – immagini generate con IA a scopo dimostrativo, da sostituire con foto reali</div>
+<div class="draft">Bozza dimostrativa per <b>OPA Greek Gyros</b> – video da Pexels e foto generate con IA a scopo dimostrativo, da sostituire con riprese del locale</div>
 
 <header class="hdr" id="hdr">
   <div class="wrap">
@@ -363,14 +372,14 @@ footer .logo b i{color:var(--lemon)}
       <span class="kicker">Come nasce il tuo gyros</span>
       <h2 class="title">Scorri e guardalo <em>prendere forma.</em></h2>
       <ol class="steps" id="steps">
-        <li class="on"><b>Pita calda</b><span>Pane pita morbido, scaldato sulla piastra.</span></li>
-        <li><b>Pollo marinato</b><span>Pollo marinato e grigliato, a striscioline.</span></li>
-        <li><b>Verdure fresche</b><span>Insalata, pomodori e cipolla.</span></li>
-        <li><b>Patatine</b><span>Dentro la pita, come si fa in Grecia.</span></li>
-        <li><b>Tzatziki</b><span>Yogurt, cetriolo e aglio: la salsa greca per eccellenza.</span></li>
+        <li class="on"><b>Pita calda</b><span>Pane pita morbido, scaldato al momento.</span></li>
+        <li><b>Pollo marinato</b><span>Cotto lentamente e tagliato sottile.</span></li>
+        <li><b>Verdure fresche</b><span>Pomodori, cipolla e insalata, tagliati freschi.</span></li>
+        <li><b>Patatine</b><span>Dorate e croccanti, dentro la pita come in Grecia.</span></li>
+        <li><b>Salsa</b><span>Tzatziki cremoso: yogurt, cetriolo e aglio.</span></li>
         <li><b>Si chiude. Opa!</b><span>Avvolta nella carta, pronta da mordere.</span></li>
       </ol>
-      <div class="step-now" id="stepNow"><b>Pita calda</b><span>Pane pita morbido, scaldato sulla piastra.</span></div>
+      <div class="step-now" id="stepNow"><b>Pita calda</b><span>Pane pita morbido, scaldato al momento.</span></div>
       <div class="bbar"><i id="buildBar"></i></div>
     </div>
     <div class="build-stage">
@@ -564,6 +573,7 @@ footer .logo b i{color:var(--lemon)}
   <div class="wrap">
     <a href="#top" class="logo"><b>OPA<i>!</i></b></a>
     <span>OPA Greek Gyros · Via delle Vigne Nuove 100, 00139 Roma · P.IVA [da inserire]</span>
+    <span class="credits">Video dimostrativi: Pexels (Ammad Rasool, OHXZONE, Meaw Zara, Ron Lach, Hoàng Thanh Hòa, RDNE Stock project)</span>
   </div>
 </footer>
 
@@ -572,7 +582,7 @@ footer .logo b i{color:var(--lemon)}
   <a class="btn btn-lemon" href="#menu">Menu</a>
 </div>
 
-<script src="gyro-foto.js"></script>
+<script src="gyro-video.js"></script>
 <script>
 (function(){
   'use strict';
