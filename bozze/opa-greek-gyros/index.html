@@ -20,7 +20,7 @@
 @font-face{font-family:'Manrope';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/manrope-latin-700-normal.woff2) format('woff2')}
 
 :root{
-  --blue:#0f3a73; --blue-2:#1b56a6; --sky:#d9e8f8; --sea:#2c74c9;
+  --blue:#0f3a73; --blue-2:#1b56a6; --sky:#d9e8f8; --sea:#1f62b3;
   --white:#fbf8f1; --paper:#ffffff; --sand:#f3ecdf;
   --lemon:#f6c445; --olive:#5f7432; --terra:#c8553d;
   --ink:#10213f; --muted:#55627a; --line:rgba(16,33,63,.12);
@@ -44,6 +44,8 @@ p{margin:0}
 .lead{margin-top:16px;color:var(--muted);font-size:clamp(16px,1.6vw,19px);max-width:620px}
 
 /* striscia bozza */
+.skip{position:absolute;left:12px;top:-60px;z-index:100;background:var(--lemon);color:var(--ink);padding:10px 16px;border-radius:10px;font-weight:700}.skip:focus{top:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .draft{background:var(--ink);color:#fff;font-size:13px;text-align:center;padding:8px 16px;font-weight:600;letter-spacing:.02em}
 .draft b{color:var(--lemon)}
 
@@ -237,8 +239,8 @@ p{margin:0}
 .g-card .row{margin-top:auto;padding-top:12px;display:flex;justify-content:space-between;align-items:center}
 .g-card .price{font-family:var(--display);font-size:24px;color:var(--blue)}
 .tag{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--sky);color:var(--blue)}
-.tag.v{background:#e5edd6;color:var(--olive)}
-.tag.hot{background:#f8ddd6;color:var(--terra)}
+.tag.v{background:#e5edd6;color:#4a5b22}
+.tag.hot{background:#f8ddd6;color:#9c3a25}
 .g-card.star{background:var(--blue);color:#fff;border-color:transparent}
 .g-card.star p{color:rgba(255,255,255,.75)}
 .g-card.star .price{color:var(--lemon)}
@@ -321,7 +323,8 @@ footer .logo b i{color:var(--lemon)}
 </head>
 <body>
 
-<div class="draft">Bozza dimostrativa per <b>OPA Greek Gyros</b> – immagini generate con IA a scopo dimostrativo, da sostituire con foto reali</div>
+<a class="skip" href="#top">Salta al contenuto</a>
+<aside class="draft" aria-label="Avviso">Bozza dimostrativa per <b>OPA Greek Gyros</b> – immagini generate con IA a scopo dimostrativo, da sostituire con foto reali</aside>
 
 <header class="hdr" id="hdr">
   <div class="wrap">
@@ -387,7 +390,7 @@ footer .logo b i{color:var(--lemon)}
       <div class="bbar"><i id="buildBar"></i></div>
     </div>
     <div class="build-stage">
-      <div class="ph-stage" id="scene"></div>
+      <div class="ph-stage" id="scene" role="img" aria-label="Animazione: la pita si scalda, arrivano pollo, insalata, pomodori, cipolla, patatine e tzatziki, poi il gyros si chiude nella carta."></div>
       <div class="opa-pop" id="opaPop" aria-hidden="true">Opa!</div>
       <div class="build-cap">Gyro Classica<b>8 €</b></div>
       <div class="build-hint" aria-hidden="true">Scorri ↓</div>
@@ -403,7 +406,7 @@ footer .logo b i{color:var(--lemon)}
       <h2 class="title">Sette pita, <em>una per ogni fame.</em></h2>
       <p class="lead">Pane pita caldo, pollo marinato e salse greche. Eccone quattro: le altre le trovi nel menu.</p>
     </div>
-    <div class="gyros-grid">
+    <div class="gyros-grid" tabindex="0" role="region" aria-label="I nostri gyros (scorri di lato)">
       <article class="g-card star rv" style="--d:0s">
         <div class="ph"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>Foto</div></div>
         <div class="body"><h3>Gyro Classica</h3><p>Pollo, insalata, pomodori, patatine, cipolla e tzatziki.</p><div class="row"><span class="tag">Classica</span><span class="price">8 €</span></div></div>
@@ -503,7 +506,7 @@ footer .logo b i{color:var(--lemon)}
       </ul>
     </div>
 
-    <p class="menu-note">Prezzi del locale. Sulle app di consegna i prezzi possono essere diversi. Per allergie e intolleranze chiedi al personale.</p>
+    <p class="menu-note">Prezzi indicativi presi dal menu online, da confermare con il locale; sulle app di consegna possono essere diversi. Per allergie e intolleranze chiedi al personale.</p>
 
     <div class="order rv">
       <span>Ordina a domicilio:</span>
@@ -576,15 +579,15 @@ footer .logo b i{color:var(--lemon)}
 <footer>
   <div class="wrap">
     <a href="#top" class="logo"><b>OPA<i>!</i></b></a>
-    <span>OPA Greek Gyros · Via delle Vigne Nuove 100, 00139 Roma · P.IVA [da inserire]</span>
+    <span>[Ragione sociale da inserire] · Via delle Vigne Nuove 100, 00139 Roma · P.IVA [da inserire] · <a href="privacy.html" style="text-decoration:underline">Privacy e cookie</a></span>
   </div>
-  <p class="wrap" style="font-size:12px;opacity:.6;margin-top:10px">Modelli 3D (modificati): "Pita bread" di danbannan, "Grilled Chicken Steak" di noemyssima7 e "Doner Kebab" di smokefumus (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener noreferrer" target="_blank">CC BY 4.0</a>), "French fries" di 1-3D.com (<a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">CC BY-SA 4.0</a>), da Sketchfab.</p>
+  <p class="wrap" style="font-size:12px;opacity:.85;margin-top:10px">Modelli 3D (modificati): "Pita bread" di danbannan, "Grilled Chicken Steak" di noemyssima7 e "Doner Kebab" di smokefumus (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener noreferrer" target="_blank">CC BY 4.0</a>), "French fries" di 1-3D.com (<a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">CC BY-SA 4.0</a>), da Sketchfab.</p>
 </footer>
 
-<div class="callbar">
+<nav class="callbar" aria-label="Azioni rapide">
   <a class="btn btn-blue" href="tel:+393284440054">Chiama</a>
   <a class="btn btn-lemon" href="#menu">Menu</a>
-</div>
+</nav>
 
 <script src="three.min.js"></script>
 <script src="GLTFLoader.js"></script>
