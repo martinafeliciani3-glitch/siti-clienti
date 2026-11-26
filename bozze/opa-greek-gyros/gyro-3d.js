@@ -1,13 +1,12 @@
 /* =========================================================
    OPA Greek Gyros – "Come nasce il tuo gyros" in 3D (Three.js)
 
-   - Ogni ingrediente è un oggetto 3D costruito dalla sua foto: superficie
-     in rilievo (mappa di altezza), pieghe (mappa normale), lato inferiore.
+   - Pita, carne, lattuga, pomodoro, cipolla e patatine sono modelli 3D veri
+     (Sketchfab, licenze CC: vedi CREDITI.md), caricati da 3d/*.glb.
    - Gli ingredienti si appoggiano davvero gli uni sugli altri: una mappa
-     delle altezze della pita viene aggiornata dopo ogni ingrediente.
-     Insalata e tzatziki si adagiano seguendo la forma di ciò che sta sotto,
-     pollo, pomodori e cipolla si posano inclinati come oggetti rigidi.
-   - Patatine: bastoncini 3D singoli.
+     delle altezze sopra la pita viene aggiornata dopo ogni pezzo e ogni
+     pezzo si posa (anche inclinato) sopra ciò che è già caduto.
+   - Lo tzatziki è una crema che si spande sopra il ripieno.
    - Finale: la pita si arrotola, entra nella carta e si alza in piedi.
    Se il 3D non è disponibile resta l'animazione fotografica (gyro-foto.js).
    ========================================================= */
@@ -15,12 +14,10 @@
   'use strict';
   var T = window.THREE;
   var stage = document.getElementById('scene'), sec = document.getElementById('build');
-  if (!T || !stage || !sec) return;
+  if (!T || !T.GLTFLoader || !stage || !sec) return;
 
-  var IMG = window.__IMG || {};
-  var src = function (n) { return IMG[n] || ('img/' + n + '.webp'); };
-  var hsrc = function (n) { return IMG[n + '-h'] || ('img/3d/' + n + '-h.webp'); };
-  var nsrc = function (n) { return IMG[n + '-n'] || ('img/3d/' + n + '-n.webp'); };
+  var GLB = window.__GLB || {};
+  var glb = function (n) { return GLB[n] || ('3d/' + n + '.glb'); };
   var clamp = function (v, a, b) { return Math.min(b === undefined ? 1 : b, Math.max(a === undefined ? 0 : a, v)); };
   var lerp = function (a, b, t) { return a + (b - a) * t; };
   var seg = function (p, a, b) { return clamp((p - a) / (b - a)); };
@@ -29,27 +26,9 @@
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var mob = window.matchMedia('(max-width: 820px)').matches;
   var rnd = (function () { var s = 20250; return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })();
+  var D2R = Math.PI / 180;
 
-  /* --- ingredienti: nome, x%, y% sulla pita, larghezza %, rotazione°, inizio e fine caduta --- */
-  var I = [
-    ['pollo-1', 31, 45, 27, -32, .13, .19], ['pollo-2', 50, 40, 28, 18, .15, .21], ['pollo-3', 68, 46, 27, -14, .17, .23],
-    ['pollo-4', 37, 59, 26, 38, .19, .25], ['pollo-1', 57, 57, 27, -42, .21, .27], ['pollo-3', 73, 60, 24, 8, .23, .29],
-    ['insalata-1', 27, 42, 25, 28, .30, .36], ['insalata-2', 52, 61, 27, -22, .32, .38], ['insalata-3', 72, 43, 24, 62, .34, .40],
-    ['pomodoro-1', 35, 50, 19, 0, .36, .42], ['pomodoro-2', 53, 45, 19, 40, .38, .44], ['pomodoro-1', 68, 53, 18, 12, .40, .46], ['pomodoro-2', 45, 60, 17, 80, .42, .48],
-    ['cipolla-1', 40, 43, 17, 0, .44, .50], ['cipolla-2', 61, 59, 14, 30, .46, .52], ['cipolla-3', 70, 45, 16, 0, .48, .54],
-    ['tzatziki', 50, 51, 30, 0, .64, .72, 'sauce'], ['tzatziki', 33, 48, 17, 140, .67, .74, 'sauce']
-  ];
-  /* tipo: rilievo (× larghezza), spessore minimo, modo di appoggio, ruvidità, colore del lato sotto, arricciatura */
-  var K = {
-    pita:     { disp: .05, tmin: 0, mode: 'base', rough: .78, under: .62 },
-    pollo:    { disp: .13, tmin: .02, mode: 'rigid', rough: .5, under: .55 },
-    insalata: { disp: .03, tmin: .014, mode: 'drape', rough: .5, under: .82, curl: .05 },
-    pomodoro: { disp: .035, tmin: .03, mode: 'rigid', rough: .25, under: .8 },
-    cipolla:  { disp: .03, tmin: .022, mode: 'rigid', rough: .3, under: .9 },
-    tzatziki: { disp: .08, tmin: .01, mode: 'sauce', rough: .3, under: .9 }
-  };
   var P = 4, W = P / 2, THM = .8 * Math.PI;      // diametro pita, mezza larghezza, angolo massimo della piega
-  var ITEM_SEG = mob ? 30 : 40, PITA_SEG = mob ? 84 : 110;
 
   /* --- renderer --- */
   var canvas = document.createElement('canvas'), renderer;
@@ -61,7 +40,7 @@
   renderer.setClearColor(0x000000, 0);
   renderer.outputEncoding = T.sRGBEncoding;
   renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = .9;
+  renderer.toneMappingExposure = .95;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = T.PCFSoftShadowMap;
 
@@ -77,11 +56,11 @@
     var soft = new T.Mesh(new T.PlaneGeometry(6, 3), new T.MeshBasicMaterial({ color: 0xffffff })); soft.position.set(0, 6, 4); soft.lookAt(0, 0, 0); es.add(soft);
     try { scene.environment = new T.PMREMGenerator(renderer).fromScene(es).texture; } catch (e) {}
   })();
-  scene.add(new T.HemisphereLight(0xfff1dc, 0x1b2a4a, .35));
-  var key = new T.DirectionalLight(0xffe6c4, 2.0); key.position.set(3.2, 7, 4.2); key.castShadow = true;
+  scene.add(new T.HemisphereLight(0xfff1dc, 0x1b2a4a, .45));
+  var key = new T.DirectionalLight(0xffe6c4, 2.1); key.position.set(3.2, 7, 4.2); key.castShadow = true;
   key.shadow.mapSize.set(mob ? 1024 : 2048, mob ? 1024 : 2048);
   var sc = key.shadow.camera; sc.left = -3.6; sc.right = 3.6; sc.top = 3.6; sc.bottom = -3.6; sc.near = 1; sc.far = 22;
-  key.shadow.bias = -.0006; key.shadow.normalBias = .02; key.shadow.radius = 4;
+  key.shadow.bias = -.0005; key.shadow.normalBias = .02; key.shadow.radius = 4;
   scene.add(key, key.target);
   var rim = new T.DirectionalLight(0x9cc0ff, .8); rim.position.set(-5, 3, -4); scene.add(rim);
   var warm = new T.PointLight(0xffb15c, 0, 6); warm.position.set(0, 1.4, 0); scene.add(warm);
@@ -90,22 +69,8 @@
 
   var root = new T.Group(); root.rotation.order = 'YXZ'; scene.add(root);
 
-  /* --- caricamento immagini (servono anche i pixel, per il rilievo) --- */
-  function loadImg(u) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = u; }); }
-  function pixels(img) {
-    var c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-    var g = c.getContext('2d'); g.drawImage(img, 0, 0);
-    return { w: c.width, h: c.height, d: g.getImageData(0, 0, c.width, c.height).data };
-  }
-  function sample(px, u, v, ch) {                  // bilineare, u,v in 0..1 (v=0 in alto)
-    var x = clamp(u) * (px.w - 1), y = clamp(v) * (px.h - 1), x0 = Math.floor(x), y0 = Math.floor(y);
-    var x1 = Math.min(px.w - 1, x0 + 1), y1 = Math.min(px.h - 1, y0 + 1), fx = x - x0, fy = y - y0, d = px.d;
-    var a = d[(y0 * px.w + x0) * 4 + ch], b = d[(y0 * px.w + x1) * 4 + ch], c = d[(y1 * px.w + x0) * 4 + ch], e = d[(y1 * px.w + x1) * 4 + ch];
-    return ((a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + e * fx) * fy) / 255;
-  }
-
   /* --- mappa delle altezze sopra la pita (per far appoggiare gli ingredienti) --- */
-  var G = 230, SPAN = 4.6, CELL = SPAN / G, HF = new Float32Array(G * G);
+  var G = 200, SPAN = 4.6, CELL = SPAN / G, HF = new Float32Array(G * G);
   function hAt(x, z) {
     var gx = (x + SPAN / 2) / CELL - .5, gz = (z + SPAN / 2) / CELL - .5;
     var x0 = clamp(Math.floor(gx), 0, G - 2), z0 = clamp(Math.floor(gz), 0, G - 2), fx = clamp(gx - x0), fz = clamp(gz - z0);
@@ -113,160 +78,155 @@
     return (a * (1 - fx) + b * fx) * (1 - fz) + (c * (1 - fx) + d * fx) * fz;
   }
   function hSoft(x, z, r) { return (hAt(x, z) * 2 + hAt(x + r, z) + hAt(x - r, z) + hAt(x, z + r) + hAt(x, z - r)) / 6; }
-  function stamp(x, z, y, rad) {
-    var cx = Math.round((x + SPAN / 2) / CELL - .5), cz = Math.round((z + SPAN / 2) / CELL - .5), R = rad || 1;
+  function stamp(x, z, y, R) {
+    var cx = Math.round((x + SPAN / 2) / CELL - .5), cz = Math.round((z + SPAN / 2) / CELL - .5);
     for (var j = -R; j <= R; j++) for (var i = -R; i <= R; i++) {
       var gx = cx + i, gz = cz + j; if (gx < 0 || gz < 0 || gx >= G || gz >= G) continue;
       var k = gz * G + gx; if (y > HF[k]) HF[k] = y;
     }
   }
+  function stampGeo(pos, R) { for (var q = 0; q < pos.length; q += 3) stamp(pos[q], pos[q + 2], pos[q + 1], R); }
 
-  /* --- la piega (finale): un punto (x,z) ad altezza h viene arrotolato attorno all'asse x --- */
-  function bend(x, z, h, f, out) {
-    if (f < 1e-4) { out[0] = x; out[1] = h; out[2] = z; return; }
-    var R = W / (f * THM), th = z / R, s = Math.sin(th), c = Math.cos(th);
-    out[0] = x; out[1] = R * (1 - c) + h * c; out[2] = R * s - h * s;
+  /* --- geometria: estrazione dai modelli, pezzi separati --- */
+  function bake(gltf) {                            // tutte le mesh del modello, con le trasformazioni applicate
+    gltf.scene.updateMatrixWorld(true); var out = [];
+    gltf.scene.traverse(function (m) {
+      if (!m.isMesh) return;
+      var g0 = m.geometry, g = new T.BufferGeometry();
+      ['position', 'normal', 'uv'].forEach(function (a) {          // copia semplice (i modelli hanno dati intrecciati)
+        var at = g0.attributes[a]; if (!at) return; var n = at.count, s = at.itemSize, arr = new Float32Array(n * s);
+        for (var i = 0; i < n; i++) { arr[i * s] = at.getX(i); if (s > 1) arr[i * s + 1] = at.getY(i); if (s > 2) arr[i * s + 2] = at.getZ(i); }
+        g.setAttribute(a, new T.BufferAttribute(arr, s));
+      });
+      if (g0.index) g.setIndex(Array.prototype.slice.call(g0.index.array));
+      if (g.attributes.uv) g.setAttribute('uv2', g.attributes.uv);      // serve alla mappa di occlusione
+      g.applyMatrix4(m.matrixWorld);
+      if (!g.index) { var ix = []; for (var i = 0; i < g.attributes.position.count; i++) ix.push(i); g.setIndex(ix); }
+      out.push({ geo: g, mat: m.material, name: (m.material && m.material.name) || '' });
+    });
+    return out;
+  }
+  function components(geo) {                       // divide una mesh in pezzi non collegati (patatine, anelli di cipolla)
+    var pos = geo.attributes.position, n = pos.count, idx = geo.index.array, par = new Int32Array(n), key = {}, i;
+    for (i = 0; i < n; i++) par[i] = i;
+    function f(a) { while (par[a] !== a) { par[a] = par[par[a]]; a = par[a]; } return a; }
+    function u(a, b) { a = f(a); b = f(b); if (a !== b) par[a] = b; }
+    for (i = 0; i < n; i++) { var k = Math.round(pos.getX(i) * 1e4) + ',' + Math.round(pos.getY(i) * 1e4) + ',' + Math.round(pos.getZ(i) * 1e4); if (key[k] !== undefined) u(i, key[k]); else key[k] = i; }
+    for (i = 0; i < idx.length; i += 3) { u(idx[i], idx[i + 1]); u(idx[i], idx[i + 2]); }
+    var groups = {};
+    for (i = 0; i < idx.length; i += 3) { var r = f(idx[i]); (groups[r] = groups[r] || []).push(idx[i], idx[i + 1], idx[i + 2]); }
+    return Object.keys(groups).map(function (r) {
+      var tri = groups[r], map = {}, nv = 0, newIdx = [], src = [];
+      tri.forEach(function (v) { if (map[v] === undefined) { map[v] = nv++; src.push(v); } newIdx.push(map[v]); });
+      var g = new T.BufferGeometry();
+      ['position', 'normal', 'uv'].forEach(function (a) {
+        var at = geo.attributes[a]; if (!at) return; var s = at.itemSize, arr = new Float32Array(nv * s);
+        src.forEach(function (v, j) { for (var c = 0; c < s; c++) arr[j * s + c] = at.array[v * s + c]; });
+        g.setAttribute(a, new T.BufferAttribute(arr, s));
+      });
+      if (g.attributes.uv) g.setAttribute('uv2', g.attributes.uv);
+      g.setIndex(newIdx); return g;
+    }).filter(function (g) { return g.attributes.position.count > 12; });
+  }
+  function centerGeo(g) {                         // centra in x,z e appoggia il fondo a y=0
+    g.computeBoundingBox(); var b = g.boundingBox;
+    g.translate(-(b.min.x + b.max.x) / 2, -b.min.y, -(b.min.z + b.max.z) / 2); return g;
+  }
+  function flatten(g) {                           // ruota il pezzo in modo che il lato più sottile sia in verticale
+    g.computeBoundingBox(); var s = g.boundingBox.getSize(new T.Vector3());
+    if (s.x < s.y && s.x <= s.z) g.rotateZ(Math.PI / 2); else if (s.z < s.y && s.z <= s.x) g.rotateX(Math.PI / 2);
+    return g;
+  }
+  function layDown(g) {                           // sdraia un pezzo allungato (patatina) lungo l'asse x
+    var a = g.attributes.position.array, n = a.length / 3, c = [0, 0, 0], i, j, k;
+    for (i = 0; i < n; i++) for (k = 0; k < 3; k++) c[k] += a[i * 3 + k] / n;
+    var C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    for (i = 0; i < n; i++) for (j = 0; j < 3; j++) for (k = 0; k < 3; k++) C[j][k] += (a[i * 3 + j] - c[j]) * (a[i * 3 + k] - c[k]);
+    var v = [1, .3, .2];
+    for (var it = 0; it < 30; it++) { var w = [0, 0, 0]; for (j = 0; j < 3; j++) for (k = 0; k < 3; k++) w[j] += C[j][k] * v[k]; var L = Math.hypot(w[0], w[1], w[2]) || 1; v = [w[0] / L, w[1] / L, w[2] / L]; }
+    g.translate(-c[0], -c[1], -c[2]);
+    g.applyMatrix4(new T.Matrix4().makeRotationFromQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(v[0], v[1], v[2]), new T.Vector3(1, 0, 0))));
+    return g;
+  }
+  function maxDim(g) { g.computeBoundingBox(); var s = g.boundingBox.getSize(new T.Vector3()); return Math.max(s.x, s.z); }
+
+  /* --- appoggio: prova alcune inclinazioni e sceglie quella che combacia meglio con ciò che sta sotto --- */
+  var objects = [];            // tutto ciò che si arrotola: { mesh, rest(pos), restN(normali), pv, fill }
+  var pita, pitaMats = [], pitaPivot, items = [], paper;
+  function place(geo0, mat, x, z, ry, opt) {
+    opt = opt || {};
+    var base = geo0.clone(); base.rotateY(ry);
+    var pos0 = base.attributes.position.array, n = pos0.length / 3, step = Math.max(1, Math.floor(n / 500));
+    var best = null, tilts = opt.tilts || [-.22, -.11, 0, .11, .22];
+    var e = new T.Euler(), m = new T.Matrix4(), v = new T.Vector3();
+    tilts.forEach(function (ax) {
+      tilts.forEach(function (az) {
+        m.makeRotationFromEuler(e.set(ax, 0, az));
+        var off = -1e9, sum = 0, cnt = 0, tmp = [];
+        for (var q = 0; q < n; q += step) {
+          v.set(pos0[q * 3], pos0[q * 3 + 1], pos0[q * 3 + 2]).applyMatrix4(m);
+          var h = hAt(x + v.x, z + v.z), d = h - v.y; if (d > off) off = d; tmp.push(v.y, h);
+        }
+        for (var k = 0; k < tmp.length; k += 2) { var gap = tmp[k] + off - tmp[k + 1]; if (gap < .12) { sum += gap; cnt++; } }
+        var score = -cnt + sum * 20 + (Math.abs(ax) + Math.abs(az)) * 4;      // molti punti a contatto, poca inclinazione
+        if (!best || score < best.score) best = { score: score, ax: ax, az: az, off: off };
+      });
+    });
+    var g = base; g.applyMatrix4(m.makeRotationFromEuler(e.set(best.ax, 0, best.az)));
+    g.translate(x, best.off + (opt.lift || .004), z);
+    stampGeo(g.attributes.position.array, opt.stampR || 1);
+    return addObject(g, mat, opt.fill !== false);
+  }
+  function addObject(g, mat, fill) {
+    g.computeBoundingBox(); var piv = g.boundingBox.getCenter(new T.Vector3());
+    if (!g.attributes.normal) g.computeVertexNormals();
+    var rest = g.attributes.position.array.slice(), restN = g.attributes.normal.array.slice();
+    g.translate(-piv.x, -piv.y, -piv.z);
+    var mesh = new T.Mesh(g, mat); mesh.castShadow = mesh.receiveShadow = true;
+    var grp = new T.Group(); grp.position.copy(piv); grp.add(mesh); root.add(grp);
+    objects.push({ mesh: mesh, rest: rest, restN: restN, pv: piv.clone(), fill: fill });
+    return { g: grp, pivot: piv };
+  }
+  function tuneMat(m, o) {
+    m = m.clone(); m.envMapIntensity = o.env || .35;
+    if (o.color) m.color.multiply(new T.Color(o.color[0], o.color[1], o.color[2]));
+    if (o.rough !== undefined) m.roughness = o.rough;
+    m.metalness = 0; m.vertexTangents = false; if (m.map) m.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return m;
   }
 
-  /* --- superfici: griglia con sopra e sotto --- */
-  function surfaceIndex(sx, sy, flip) {
-    var idx = [];
-    for (var j = 0; j < sy; j++) for (var i = 0; i < sx; i++) {
-      var a = j * (sx + 1) + i, b = (j + 1) * (sx + 1) + i, c = b + 1, d = a + 1;
-      if (!flip) idx.push(a, b, d, b, c, d); else idx.push(a, d, b, b, d, c);
+  /* --- tzatziki: crema che si spande sopra il ripieno --- */
+  var tzTex = (function () {
+    var c = document.createElement('canvas'); c.width = c.height = 512; var g = c.getContext('2d');
+    g.fillStyle = '#f1eee2'; g.fillRect(0, 0, 512, 512);
+    for (var i = 0; i < 900; i++) {                // cetriolo e aneto
+      var x = Math.random() * 512, y = Math.random() * 512, r = Math.random();
+      g.fillStyle = r < .5 ? 'rgba(120,150,70,.55)' : r < .8 ? 'rgba(70,110,40,.6)' : 'rgba(200,210,170,.5)';
+      g.save(); g.translate(x, y); g.rotate(Math.random() * 3); g.fillRect(0, 0, 1 + Math.random() * 5, 1 + Math.random() * 2); g.restore();
     }
-    return idx;
-  }
-  function makeMesh(pos, uv, index, mat) {
-    var g = new T.BufferGeometry();
-    g.setAttribute('position', new T.BufferAttribute(pos, 3));
-    if (uv) g.setAttribute('uv', new T.BufferAttribute(uv, 2));
-    g.setIndex(index); g.computeVertexNormals();
-    var m = new T.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; return m;
-  }
-  var texCache = {};
-  function colorTex(name, img) {
-    if (texCache[name]) return texCache[name];
-    var t = new T.Texture(img); t.encoding = T.sRGBEncoding; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.needsUpdate = true;
-    return (texCache[name] = t);
-  }
-  function plainTex(img) { var t = new T.Texture(img); t.needsUpdate = true; return t; }
-
-  var objects = [];        // tutto ciò che si arrotola: { mesh, rest(Float32Array mondo), pivot }
-  var pita, pitaMat, pitaPivot, items = [], fries = [], paper;
-
-  function buildPiece(name, A, kind, w, x, z, ry, pitaMode) {
-    var k = K[kind], col = A.col, hp = A.h;
-    var h = w * col.h / col.w, sx = pitaMode ? PITA_SEG : ITEM_SEG, sy = Math.max(6, Math.round(sx * h / w));
-    var n = (sx + 1) * (sy + 1), disp = k.disp * w;
-    var top = new Float32Array(n * 3), bot = new Float32Array(n * 3), uv = new Float32Array(n * 2);
-    var WX = new Float32Array(n), WZ = new Float32Array(n), HH = new Float32Array(n), AA = new Float32Array(n);
-    var cr = Math.cos(ry), sr = Math.sin(ry);
-    for (var j = 0, q = 0; j <= sy; j++) for (var i = 0; i <= sx; i++, q++) {
-      var u = i / sx, v = j / sy, lx = (u - .5) * w, lz = (v - .5) * h;
-      WX[q] = x + lx * cr + lz * sr; WZ[q] = z - lx * sr + lz * cr;
-      HH[q] = sample(hp, u, v, 0); AA[q] = sample(col, u, v, 3);
-      uv[q * 2] = u; uv[q * 2 + 1] = 1 - v;
-    }
-    // appoggio
-    var base = new Float32Array(n), q2;
-    if (pitaMode) { for (q2 = 0; q2 < n; q2++) base[q2] = 0; }
-    else if (k.mode === 'rigid' || k.mode === 'sauce') {
-      // piano che approssima ciò che sta sotto, poi sollevato quanto basta per non compenetrare
-      var S = 0, Sx = 0, Sz = 0, Sxx = 0, Szz = 0, Sxz = 0, Sy = 0, Sxy = 0, Szy = 0, U = new Float32Array(n);
-      for (q2 = 0; q2 < n; q2++) {
-        U[q2] = hAt(WX[q2], WZ[q2]); if (AA[q2] < .4) continue;
-        var X = WX[q2] - x, Z = WZ[q2] - z, Y = U[q2];
-        S++; Sx += X; Sz += Z; Sxx += X * X; Szz += Z * Z; Sxz += X * Z; Sy += Y; Sxy += X * Y; Szy += Z * Y;
-      }
-      var M = [[S, Sx, Sz], [Sx, Sxx, Sxz], [Sz, Sxz, Szz]], rhs = [Sy, Sxy, Szy], sol = solve3(M, rhs) || [Sy / Math.max(1, S), 0, 0];
-      var gx = clamp(sol[1], -.5, .5), gz = clamp(sol[2], -.5, .5), off = -1e9;
-      for (q2 = 0; q2 < n; q2++) { if (AA[q2] < .25) continue; var pl = sol[0] + gx * (WX[q2] - x) + gz * (WZ[q2] - z); off = Math.max(off, U[q2] - pl); }
-      if (k.mode === 'sauce') {      // crema: piano medio, che si adagia appena sulle forme sotto
-        for (q2 = 0; q2 < n; q2++) { var pl2 = sol[0] + gx * (WX[q2] - x) + gz * (WZ[q2] - z); base[q2] = pl2 + clamp(hSoft(WX[q2], WZ[q2], .16) - pl2, -.02, .06) + .03; }
-      } else for (q2 = 0; q2 < n; q2++) base[q2] = sol[0] + gx * (WX[q2] - x) + gz * (WZ[q2] - z) + off + .004;
-    } else {
-      // si adagia seguendo la forma di ciò che sta sotto
-      for (q2 = 0; q2 < n; q2++) base[q2] = hSoft(WX[q2], WZ[q2], .035) + .004;
-    }
-    // superfici
-    var cx = 0, cy = 0, cz = 0, cn = 0, minB = 1e9;
-    for (j = 0, q = 0; j <= sy; j++) for (i = 0; i <= sx; i++, q++) {
-      var ea = clamp((AA[q] - .5) * 2.5), edge = Math.min(1, HH[q] * 8) * ea, curl = 0;   // ea: sopra e sotto si chiudono sul bordo
-      if (k.curl) { var du = i / sx - .5, dv = j / sy - .5, rr = (du * du + dv * dv) * 4; curl = k.curl * w * rr * rr; }
-      var yt = base[q] + HH[q] * disp * ea + k.tmin * edge + curl * edge;
-      var yb = pitaMode ? -.07 * edge : base[q] + curl * edge * .9 + .002 * ea;
-      top[q * 3] = WX[q]; top[q * 3 + 1] = yt; top[q * 3 + 2] = WZ[q];
-      bot[q * 3] = WX[q]; bot[q * 3 + 1] = yb; bot[q * 3 + 2] = WZ[q];
-      if (AA[q] > .5) { cx += WX[q]; cy += yt; cz += WZ[q]; cn++; minB = Math.min(minB, yb); }
-    }
-    // aggiorna la mappa delle altezze con la superficie appena posata
-    for (q = 0; q < n; q++) if (AA[q] > .5) stamp(WX[q], WZ[q], top[q * 3 + 1], pitaMode ? 1 : 1);
-    cn = Math.max(1, cn);
-    var pivot = new T.Vector3(cx / cn, kind === 'tzatziki' ? minB : cy / cn, cz / cn);
-    // geometria locale rispetto al perno
-    var restT = top.slice(), restB = bot.slice();
-    for (q = 0; q < n; q++) { top[q * 3] -= pivot.x; top[q * 3 + 1] -= pivot.y; top[q * 3 + 2] -= pivot.z; bot[q * 3] -= pivot.x; bot[q * 3 + 1] -= pivot.y; bot[q * 3 + 2] -= pivot.z; }
-    var ct = colorTex(name, A.img), nt = A.nt;
-    var mt = new T.MeshStandardMaterial({ map: ct, alphaTest: .5, normalMap: nt, roughness: k.rough, metalness: 0, envMapIntensity: .32 });
-    var mb = new T.MeshStandardMaterial({ map: ct, alphaTest: .5, roughness: .85, metalness: 0, color: new T.Color(k.under, k.under * .95, k.under * .9), envMapIntensity: .2 });
-    var depth = new T.MeshDepthMaterial({ depthPacking: T.RGBADepthPacking, map: ct, alphaTest: .5 });
-    var g = new T.Group(); g.position.copy(pivot);
-    var mT = makeMesh(top, uv, surfaceIndex(sx, sy, false), mt), mB = makeMesh(bot, uv, surfaceIndex(sx, sy, true), mb);
-    mT.customDepthMaterial = mB.customDepthMaterial = depth;
-    g.add(mT, mB); root.add(g);
-    objects.push({ mesh: mT, rest: restT, pv: pivot.clone(), fill: !pitaMode }, { mesh: mB, rest: restB, pv: pivot.clone(), fill: !pitaMode });
-    return { g: g, mat: mt, pivot: pivot };
-  }
-
-  function solve3(m, r) {
-    var a = m[0][0], b = m[0][1], c = m[0][2], d = m[1][0], e = m[1][1], f = m[1][2], g = m[2][0], h = m[2][1], i = m[2][2];
-    var det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g); if (Math.abs(det) < 1e-9) return null;
-    return [(r[0] * (e * i - f * h) - b * (r[1] * i - f * r[2]) + c * (r[1] * h - e * r[2])) / det,
-            (a * (r[1] * i - f * r[2]) - r[0] * (d * i - f * g) + c * (d * r[2] - r[1] * g)) / det,
-            (a * (e * r[2] - r[1] * h) - b * (d * r[2] - r[1] * g) + r[0] * (d * h - e * g)) / det];
-  }
-
-  /* --- patatine: bastoncini 3D singoli --- */
-  var friesTex = (function () {
-    var c = document.createElement('canvas'); c.width = 64; c.height = 256; var g = c.getContext('2d');
-    var gr = g.createLinearGradient(0, 0, 0, 256);
-    gr.addColorStop(0, '#b9792b'); gr.addColorStop(.08, '#e3a53d'); gr.addColorStop(.5, '#f2c35a'); gr.addColorStop(.92, '#e2a23a'); gr.addColorStop(1, '#ad6f25');
-    g.fillStyle = gr; g.fillRect(0, 0, 64, 256);
-    for (var s = 0; s < 260; s++) { g.fillStyle = 'rgba(' + (Math.random() > .5 ? '255,230,150' : '150,90,30') + ',' + (.15 + Math.random() * .25) + ')'; g.fillRect(Math.random() * 64, Math.random() * 256, 1 + Math.random() * 3, 1 + Math.random() * 5); }
-    var t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding; return t;
+    var t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding; t.wrapS = t.wrapT = T.RepeatWrapping; return t;
   })();
-  var friesMat = new T.MeshStandardMaterial({ map: friesTex, roughness: .5, metalness: 0, envMapIntensity: .35, emissive: 0x5a2c00, emissiveIntensity: .35 });
-  function buildFry(n, t0) {
-    var L = .55 + rnd() * .3, r = .05 + rnd() * .012, a = rnd() * Math.PI;
-    var cx = -1.05 + rnd() * 2.1, cz = -.5 + rnd() * 1.0;
-    var ca = Math.cos(a), sa = Math.sin(a);
-    // appoggio lungo l'asse
-    var NS = 9, ys = [], best = -1e9;
-    for (var s = 0; s < NS; s++) {
-      var t = (s / (NS - 1) - .5) * L, px = cx + ca * t, pz = cz + sa * t;
-      ys.push(Math.max(hAt(px, pz), hAt(px - sa * r, pz + ca * r), hAt(px + sa * r, pz - ca * r)));
+  var tzMat = new T.MeshStandardMaterial({ map: tzTex, roughness: .32, metalness: 0, envMapIntensity: .5, color: 0xffffff });
+  function sauce(x, z, rx, rz, hgt, ry) {
+    var S = mob ? 34 : 44, n = (S + 1) * (S + 1), top = new Float32Array(n * 3), uv = new Float32Array(n * 2), idx = [];
+    var cr = Math.cos(ry), sr = Math.sin(ry), ph = rnd() * 6, mean = 0, mc = 0;
+    for (var a1 = 0; a1 < 6.28; a1 += .5) for (var r1 = 0; r1 <= 1; r1 += .25) { mean += hSoft(x + Math.cos(a1) * rx * r1, z + Math.sin(a1) * rz * r1, .2); mc++; }
+    mean /= mc;                                     // la crema si posa su un livello medio, morbido
+    for (var j = 0, q = 0; j <= S; j++) for (var i = 0; i <= S; i++, q++) {
+      var u = i / S * 2 - 1, v = j / S * 2 - 1, ang = Math.atan2(v, u), rr = Math.sqrt(u * u + v * v);
+      var edge = 1 + .16 * Math.sin(ang * 3 + ph) + .09 * Math.sin(ang * 7 - ph);    // bordo irregolare
+      var k = clamp(rr / edge), lx = u * rx, lz = v * rz;
+      if (rr > edge) { lx *= edge / rr; lz *= edge / rr; }
+      var wx = x + lx * cr + lz * sr, wz = z - lx * sr + lz * cr;
+      var dome = Math.pow(1 - k * k, .6) * hgt * (1 + .12 * Math.sin(u * 9 + ph) * Math.cos(v * 7));
+      top[q * 3] = wx; top[q * 3 + 1] = mean * .75 + hSoft(wx, wz, .3) * .25 + dome + .02; top[q * 3 + 2] = wz;
+      uv[q * 2] = u * .7; uv[q * 2 + 1] = v * .7;
     }
-    var h0 = Math.max.apply(null, ys.slice(0, (NS / 2) | 0)), h1 = Math.max.apply(null, ys.slice((NS / 2) | 0));
-    var slope = clamp((h1 - h0) / (L * .5), -.3, .3), mid = (h0 + h1) / 2;
-    for (s = 0; s < NS; s++) { var tt = (s / (NS - 1) - .5) * L; best = Math.max(best, ys[s] - (mid + slope * tt)); }
-    var yc = mid + best + r + .004;
-    var geo = new T.BoxGeometry(r * 2, r * 2, L, 2, 2, 8), pa = geo.attributes.position;
-    for (var q = 0; q < pa.count; q++) {
-      var lx = pa.getX(q), ly = pa.getY(q), lz = pa.getZ(q);
-      var round = 1 - .18 * (Math.abs(lx) / r) * (Math.abs(ly) / r);           // spigoli smussati
-      lx *= round; ly *= round; lx += (rnd() - .5) * .004; ly += (rnd() - .5) * .004;
-      var wx = cx + ca * lz - sa * lx, wz = cz + sa * lz + ca * lx, wy = yc + slope * lz + ly;
-      pa.setXYZ(q, wx, wy, wz);
-    }
-    for (s = 0; s < NS; s++) { var t2 = (s / (NS - 1) - .5) * L; stamp(cx + ca * t2, cz + sa * t2, yc + slope * t2 + r * .2, 1); }
-    var piv = new T.Vector3(cx, yc, cz), rest = pa.array.slice();
-    for (q = 0; q < pa.count; q++) pa.setXYZ(q, pa.getX(q) - piv.x, pa.getY(q) - piv.y, pa.getZ(q) - piv.z);
-    geo.computeVertexNormals();
-    var m = new T.Mesh(geo, friesMat); m.castShadow = m.receiveShadow = true;
-    var g = new T.Group(); g.position.copy(piv); g.add(m); root.add(g);
-    objects.push({ mesh: m, rest: rest, pv: piv.clone(), fill: true });
-    return { g: g, pivot: piv, t0: t0, t1: t0 + .05, ax: (rnd() - .5) * 8, ay: (rnd() - .5) * 6, az: (rnd() - .5) * 8 };
+    for (j = 0; j < S; j++) for (i = 0; i < S; i++) { var a = j * (S + 1) + i, b = a + S + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+    var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(top, 3)); g.setAttribute('uv', new T.BufferAttribute(uv, 2));
+    g.setIndex(idx); g.computeVertexNormals();
+    stampGeo(top, 1);
+    return addObject(g, tzMat, true);
   }
 
   /* --- carta con la greca e "OPA!" --- */
@@ -294,27 +254,76 @@
   var sMat = new T.PointsMaterial({ map: steamTex, size: 1.3, transparent: true, depthWrite: false, opacity: 0 });
   var steam = new T.Points(sGeo, sMat); root.add(steam);
 
-  /* --- costruzione (dopo il caricamento delle immagini) --- */
-  var names = ['pita', 'pollo-1', 'pollo-2', 'pollo-3', 'pollo-4', 'insalata-1', 'insalata-2', 'insalata-3', 'pomodoro-1', 'pomodoro-2', 'cipolla-1', 'cipolla-2', 'cipolla-3', 'tzatziki'];
-  var ready = false;
-  Promise.all(names.map(function (n) {
-    return Promise.all([loadImg(src(n)), loadImg(hsrc(n)), loadImg(nsrc(n))]).then(function (r) {
-      return { name: n, img: r[0], col: pixels(r[0]), h: pixels(r[1]), nt: plainTex(r[2]) };
-    });
-  })).then(function (list) {
-    var A = {}; list.forEach(function (a) { A[a.name] = a; });
-    // pita e mappa delle altezze iniziale
-    var pp = buildPiece('pita', A.pita, 'pita', P, 0, 0, 0, true);
-    pita = pp.g; pitaMat = pp.mat; pitaPivot = pp.pivot;
-    I.forEach(function (d, n) {
-      var kind = d[0].split('-')[0];
-      var it = buildPiece(d[0], A[d[0]], kind, d[3] / 100 * P, (d[1] - 50) / 100 * P, (d[2] - 50) / 100 * P, -d[4] * Math.PI / 180, false);
-      it.t0 = d[5]; it.t1 = d[6]; it.sauce = d[7] === 'sauce';
-      it.ax = (rnd() - .5) * 9; it.az = (rnd() - .5) * 9; it.ay = (n % 2 ? 1 : -1) * (2 + rnd() * 3);
+  /* --- costruzione (dopo il caricamento dei modelli) --- */
+  var ready = false, loader = new T.GLTFLoader();
+  function load(n) { return new Promise(function (res, rej) { loader.load(glb(n), res, undefined, rej); }); }
+  Promise.all([load('pita'), load('kebab'), load('patatine')]).then(function (r) {
+    /* pita */
+    var pm = bake(r[0]);
+    var pg = flatten(pm[0].geo); centerGeo(pg); var ps = P / maxDim(pg); pg.scale(ps, ps * .42, ps);
+    pg.computeBoundingBox(); pg.translate(0, -pg.boundingBox.max.y * .55, 0);
+    stampGeo(pg.attributes.position.array, 2);
+    var pmat = tuneMat(pm[0].mat, { rough: .82, env: .3, color: [1.0, .85, .64] }); pitaMats.push(pmat);
+    pitaTop = hAt(0, 0);
+    var pp = addObject(pg, pmat, false); pita = pp.g; pitaPivot = pp.pivot;
+
+    /* parti del kebab: carne, lattuga, pomodoro, cipolla */
+    var parts = { Patty: [], Lettuce: [], Tomato: [], Onion: [] };
+    bake(r[1]).forEach(function (o) { if (parts[o.name]) parts[o.name].push(o); });
+    function prep(o, size, sy) { var g = flatten(o.geo.clone()); centerGeo(g); var s = size / maxDim(g); g.scale(s, s * (sy || 1), s); return g; }
+    var meatMat = tuneMat(parts.Patty[0].mat, { color: [1.28, 1.0, .6], rough: .55, env: .3 });    // tono del pollo grigliato
+    var letMat = tuneMat(parts.Lettuce[0].mat, { rough: .45, env: .45 });
+    var tomMat = tuneMat(parts.Tomato[0].mat, { rough: .3, env: .55 });
+    var oniMat = tuneMat(parts.Onion[0].mat, { color: [.92, .62, .86], rough: .35, env: .5 });
+    if (oniMat.side !== undefined) oniMat.side = T.DoubleSide;
+
+    // [tipo, indice pezzo, x, z, rotazione°, dimensione, inizio, fine]
+    var L = [
+      ['Patty', 0, -.75, -.2, -32, 1.25, .13, .19], ['Patty', 1, .05, -.42, 18, 1.3, .15, .21], ['Patty', 2, .8, -.15, -14, 1.15, .17, .23],
+      ['Patty', 3, -.5, .38, 38, 1.15, .19, .25], ['Patty', 0, .3, .3, -42, 1.2, .21, .27], ['Patty', 2, .95, .42, 8, 1.0, .23, .29],
+      ['Lettuce', 0, -.85, -.25, 28, 1.25, .30, .36], ['Lettuce', 1, .1, .4, -22, 1.3, .32, .38], ['Lettuce', 0, .85, -.2, 62, 1.15, .34, .40],
+      ['Tomato', 0, -.55, 0, 0, .82, .36, .42], ['Tomato', 1, .15, -.25, 40, .82, .38, .44], ['Tomato', 0, .75, .15, 12, .78, .40, .46], ['Tomato', 1, -.15, .45, 80, .74, .42, .48]
+    ];
+    L.forEach(function (d) {
+      var src = parts[d[0]][d[1] % parts[d[0]].length];
+      var g = prep(src, d[5], d[0] === 'Lettuce' ? .5 : d[0] === 'Patty' ? .7 : 1);
+      if (rnd() > .5) { g.rotateZ(Math.PI); centerGeo(g); }                      // a volte capovolto
+      var mat = d[0] === 'Patty' ? meatMat : d[0] === 'Lettuce' ? letMat : tomMat;
+      var it = place(g, mat, d[2], d[3] + .25, d[4] * D2R, { stampR: d[0] === 'Lettuce' ? 1 : 1 });
+      it.t0 = d[6]; it.t1 = d[7]; it.ax = (rnd() - .5) * 9; it.az = (rnd() - .5) * 9; it.ay = (rnd() > .5 ? 1 : -1) * (2 + rnd() * 3);
       items.push(it);
-      // le patatine cadono dopo la cipolla e prima dello tzatziki
-      if (n === 15) for (var f = 0; f < 14; f++) fries.push(buildFry(f, .53 + f * .0065));
     });
+
+    // cipolla: anelli separati
+    var rings = [];
+    parts.Onion.forEach(function (o) { rings = rings.concat(components(o.geo)); });
+    for (var i = 0; i < 7 && rings.length; i++) {
+      var rg = rings[i % rings.length].clone(); flatten(rg); centerGeo(rg);
+      var rs = (.45 + rnd() * .2) / maxDim(rg); rg.scale(rs, rs, rs);
+      var it = place(rg, oniMat, -.9 + i * .3 + (rnd() - .5) * .2, .2 + (rnd() - .5) * .7, rnd() * 6.28);
+      it.t0 = .44 + i * .014; it.t1 = it.t0 + .05; it.ax = (rnd() - .5) * 9; it.az = (rnd() - .5) * 9; it.ay = (rnd() - .5) * 6;
+      items.push(it);
+    }
+
+    // patatine: una per una
+    var fm = bake(r[2]), fries = components(fm[0].geo);
+    var friesMat = tuneMat(fm[0].mat, { color: [1.05, .74, .42], rough: .5, env: .35 });
+    friesMat.emissive = new T.Color(0x3a1a00); friesMat.emissiveIntensity = .25;
+    var flen = fries.map(function (g) { g.computeBoundingBox(); var z = g.boundingBox.getSize(new T.Vector3()); return Math.max(z.x, z.y, z.z); });
+    var fmed = flen.slice().sort(function (a, b) { return a - b; })[flen.length >> 1];
+    fries = fries.filter(function (g, i) { return flen[i] > fmed * .6; });           // solo patatine intere, niente frammenti
+    fries.sort(function () { return rnd() - .5; });
+    for (i = 0; i < Math.min(16, fries.length); i++) {
+      var fg = fries[i]; layDown(fg); centerGeo(fg); var fl = (.62 + rnd() * .28) / maxDim(fg); fg.scale(fl, fl, fl);
+      var ft = place(fg, friesMat, -1.0 + rnd() * 2.0, -.2 + rnd() * .85, rnd() * Math.PI, { tilts: [-.08, 0, .08] });
+      ft.t0 = .53 + i * .0058; ft.t1 = ft.t0 + .05; ft.ax = (rnd() - .5) * 8; ft.az = (rnd() - .5) * 8; ft.ay = (rnd() - .5) * 6;
+      items.push(ft);
+    }
+
+    // tzatziki
+    var tz1 = sauce(0, .25, .6, .42, .2, .2); tz1.t0 = .64; tz1.t1 = .72; tz1.sauce = true; items.push(tz1);
+    var tz2 = sauce(-.65, .15, .34, .26, .14, 2.4); tz2.t0 = .67; tz2.t1 = .74; tz2.sauce = true; items.push(tz2);
+
     paper = new T.Mesh((function () { var g = new T.CylinderGeometry(1.0, .72, 1, 56, 1, true); g.translate(0, .5, 0); return g; })(),
       new T.MeshStandardMaterial({ map: paperTexture(), roughness: .9, side: T.DoubleSide, envMapIntensity: .3 }));
     paper.rotation.z = -Math.PI / 2; paper.position.set(-2.25, W / THM, 0); paper.castShadow = true; paper.visible = false;
@@ -330,15 +339,27 @@
   function resize() { var w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
   addEventListener('resize', resize); resize();
 
-  var lastF = 0, tmp = [0, 0, 0];
+  /* --- la piega: ogni punto (x,z) ad altezza h si avvolge attorno all'asse x;
+         il ripieno si gonfia quanto basta per riempire la pita che si chiude --- */
+  var lastF = 0, fitK = 1, pitaTop = .2;
   function applyFold(f) {
+    if (fitK === 1) {                               // quanto comprimere il ripieno per farlo stare nella pita chiusa
+      var mx = 0; objects.forEach(function (o) { if (!o.fill) return; for (var q = 1; q < o.rest.length; q += 3) if (o.rest[q] > mx) mx = o.rest[q]; });
+      fitK = Math.min(.999, (W / THM * 1.55 - pitaTop) / Math.max(.01, mx - pitaTop));
+    }
     objects.forEach(function (o) {
-      var pa = o.mesh.geometry.attributes.position, arr = pa.array, rest = o.rest, pv = o.pv;
+      var pa = o.mesh.geometry.attributes.position, na = o.mesh.geometry.attributes.normal, arr = pa.array, nar = na.array, rest = o.rest, rn = o.restN, pv = o.pv;
+      var R = f > 1e-4 ? W / (f * THM) : 0, kf = lerp(1, fitK, f);
       for (var q = 0; q < arr.length; q += 3) {
-        bend(rest[q], rest[q + 2], o.fill ? rest[q + 1] * (1 + f * 1.6) : rest[q + 1], f, tmp);   // il ripieno riempie la pita che si chiude
-        arr[q] = tmp[0] - pv.x; arr[q + 1] = tmp[1] - pv.y; arr[q + 2] = tmp[2] - pv.z;
+        var x = rest[q], h = rest[q + 1], z = rest[q + 2];
+        if (o.fill) h = pitaTop + (h - pitaTop) * kf;
+        if (!R) { arr[q] = x - pv.x; arr[q + 1] = h - pv.y; arr[q + 2] = z - pv.z; nar[q] = rn[q]; nar[q + 1] = rn[q + 1]; nar[q + 2] = rn[q + 2]; continue; }
+        var th = z / R, s = Math.sin(th), c = Math.cos(th);
+        arr[q] = x - pv.x; arr[q + 1] = R * (1 - c) + h * c - pv.y; arr[q + 2] = R * s - h * s - pv.z;
+        var ny = rn[q + 1], nz = rn[q + 2];
+        nar[q] = rn[q]; nar[q + 1] = ny * c + nz * s; nar[q + 2] = -ny * s + nz * c;
       }
-      pa.needsUpdate = true; o.mesh.geometry.computeVertexNormals(); o.mesh.geometry.computeBoundingSphere();
+      pa.needsUpdate = true; na.needsUpdate = true; o.mesh.geometry.computeBoundingSphere();
     });
   }
 
@@ -349,24 +370,21 @@
     pita.position.set(pitaPivot.x, pitaPivot.y + (1 - pk) * 5, pitaPivot.z); pita.rotation.set((1 - pk) * .5, (1 - pk) * -1.6, 0);
     pita.visible = p > .001;
     var heat = Math.sin(seg(p, .03, .22) * Math.PI);
-    pitaMat.emissive.setRGB(.55 * heat, .2 * heat, .04 * heat); warm.intensity = heat * 1.4;
+    pitaMats.forEach(function (m) { m.emissive.setRGB(.5 * heat, .18 * heat, .03 * heat); }); warm.intensity = heat * 1.4;
 
     // ingredienti che cadono e si appoggiano
-    function fall(it, sauce) {
+    items.forEach(function (it) {
       var k = seg(p, it.t0, it.t1); it.g.visible = k > 0; if (!it.g.visible) return;
       var air = 1 - land(k);
-      if (sauce) {
-        var sq = k < .7 ? 1 - Math.pow(1 - k / .7, 3) : 1 + Math.sin((k - .7) / .3 * Math.PI) * .06;
+      if (it.sauce) {
+        var sq = k < .7 ? 1 - Math.pow(1 - k / .7, 3) : 1 + Math.sin((k - .7) / .3 * Math.PI) * .05;
         it.g.position.set(it.pivot.x, it.pivot.y + air * .5, it.pivot.z);
-        it.g.scale.set(Math.max(.01, sq), Math.max(.01, sq * (k < .7 ? 1.25 - .25 * k / .7 : 1)), Math.max(.01, sq));
-        it.g.rotation.set(0, 0, 0);
+        it.g.scale.set(Math.max(.01, sq), Math.max(.01, sq * (k < .7 ? 1.12 - .12 * k / .7 : 1)), Math.max(.01, sq));
       } else {
         it.g.position.set(it.pivot.x, it.pivot.y + air * 5.5, it.pivot.z);
         it.g.rotation.set(air * it.ax, air * it.ay, air * it.az);
       }
-    }
-    items.forEach(function (it) { fall(it, it.sauce); });
-    fries.forEach(function (fr) { fall(fr, false); });
+    });
 
     // vapore
     var sa = seg(p, .05, .14) * (1 - seg(p, .7, .8));
