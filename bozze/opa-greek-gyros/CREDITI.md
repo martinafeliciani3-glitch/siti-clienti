@@ -13,7 +13,9 @@ semplificata) e, nella scena, scomposti, ricolorati e deformati.
 - `3d/pita.glb` – "Pita bread" di danbannan,
   https://sketchfab.com/3d-models/5846b28f25f3474aa4d4a01abacc8772 – licenza CC BY 4.0
   (https://creativecommons.org/licenses/by/4.0/).
-- `3d/kebab.glb` (carne, lattuga, pomodoro, cipolla) – "30Days3D - Day 1 - Doner Kebab"
+- `3d/pollo.glb` – "Grilled Chicken Steak" di noemyssima7,
+  https://sketchfab.com/3d-models/9797e54671094233bcfa469f616bd7df – licenza CC BY 4.0.
+- `3d/kebab.glb` (lattuga, pomodoro, cipolla) – "30Days3D - Day 1 - Doner Kebab"
   di smokefumus, https://sketchfab.com/3d-models/ff4869fdc1014a87bd1401d1c4ad9460 –
   licenza CC BY 4.0.
 - `3d/patatine.glb` – "French fries" di 1-3D.com,

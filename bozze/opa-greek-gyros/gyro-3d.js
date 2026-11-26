@@ -187,6 +187,25 @@
     objects.push({ mesh: mesh, rest: rest, restN: restN, pv: piv.clone(), fill: fill });
     return { g: grp, pivot: piv };
   }
+  function phys(m, cc, ccr) {                     // stesso materiale, con uno strato lucido (cibo fresco/umido)
+    var p = new T.MeshPhysicalMaterial();
+    ['map', 'normalMap', 'normalScale', 'roughnessMap', 'roughness', 'aoMap', 'aoMapIntensity', 'color', 'side', 'envMapIntensity', 'emissive', 'alphaTest', 'transparent', 'opacity'].forEach(function (k) {
+      if (m[k] !== undefined && m[k] !== null) p[k] = m[k] && m[k].clone && !m[k].isTexture ? m[k].clone() : m[k];
+    });
+    p.metalness = 0; p.clearcoat = cc; p.clearcoatRoughness = ccr; return p;
+  }
+  function merge(list) {                          // unisce più geometrie in una sola
+    var n = 0, idx = [], pos = [], nor = [], uv = [];
+    list.forEach(function (g) {
+      var a = g.attributes, c = a.position.count;
+      Array.prototype.push.apply(pos, a.position.array); Array.prototype.push.apply(nor, a.normal ? a.normal.array : new Float32Array(c * 3));
+      Array.prototype.push.apply(uv, a.uv ? a.uv.array : new Float32Array(c * 2));
+      g.index.array.forEach(function (i) { idx.push(i + n); }); n += c;
+    });
+    var g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
+    g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setAttribute('uv2', g.attributes.uv); g.setIndex(idx); return g;
+  }
   function tuneMat(m, o) {
     m = m.clone(); m.envMapIntensity = o.env || .35;
     if (o.color) m.color.multiply(new T.Color(o.color[0], o.color[1], o.color[2]));
@@ -257,7 +276,7 @@
   /* --- costruzione (dopo il caricamento dei modelli) --- */
   var ready = false, loader = new T.GLTFLoader();
   function load(n) { return new Promise(function (res, rej) { loader.load(glb(n), res, undefined, rej); }); }
-  Promise.all([load('pita'), load('kebab'), load('patatine')]).then(function (r) {
+  Promise.all([load('pita'), load('kebab'), load('patatine'), load('pollo')]).then(function (r) {
     /* pita */
     var pm = bake(r[0]);
     var pg = flatten(pm[0].geo); centerGeo(pg); var ps = P / maxDim(pg); pg.scale(ps, ps * .42, ps);
@@ -270,10 +289,12 @@
     /* parti del kebab: carne, lattuga, pomodoro, cipolla */
     var parts = { Patty: [], Lettuce: [], Tomato: [], Onion: [] };
     bake(r[1]).forEach(function (o) { if (parts[o.name]) parts[o.name].push(o); });
+    var pl = bake(r[3]);                            // pollo grigliato vero (scansione), unito in un solo pezzo
+    parts.Patty = [{ geo: merge(pl.map(function (o) { return o.geo; })), mat: pl[0].mat }];
     function prep(o, size, sy) { var g = flatten(o.geo.clone()); centerGeo(g); var s = size / maxDim(g); g.scale(s, s * (sy || 1), s); return g; }
-    var meatMat = tuneMat(parts.Patty[0].mat, { color: [1.28, 1.0, .6], rough: .55, env: .3 });    // tono del pollo grigliato
-    var letMat = tuneMat(parts.Lettuce[0].mat, { rough: .45, env: .45 });
-    var tomMat = tuneMat(parts.Tomato[0].mat, { rough: .3, env: .55 });
+    var meatMat = phys(tuneMat(parts.Patty[0].mat, { color: [1.1, .9, .66], rough: .48, env: .35 }), .25, .45);
+    var letMat = phys(tuneMat(parts.Lettuce[0].mat, { rough: .42, env: .45 }), .55, .3);         // foglia fresca, lucida
+    var tomMat = phys(tuneMat(parts.Tomato[0].mat, { rough: .28, env: .55 }), .85, .18);         // polpa bagnata
     var oniMat = tuneMat(parts.Onion[0].mat, { color: [.92, .62, .86], rough: .35, env: .5 });
     if (oniMat.side !== undefined) oniMat.side = T.DoubleSide;
 
@@ -287,7 +308,7 @@
     L.forEach(function (d) {
       var src = parts[d[0]][d[1] % parts[d[0]].length];
       var g = prep(src, d[5], d[0] === 'Lettuce' ? .5 : d[0] === 'Patty' ? .7 : 1);
-      if (rnd() > .5) { g.rotateZ(Math.PI); centerGeo(g); }                      // a volte capovolto
+      if (d[0] !== 'Patty' && rnd() > .5) { g.rotateZ(Math.PI); centerGeo(g); }                      // a volte capovolto
       var mat = d[0] === 'Patty' ? meatMat : d[0] === 'Lettuce' ? letMat : tomMat;
       var it = place(g, mat, d[2], d[3] + .25, d[4] * D2R, { stampR: d[0] === 'Lettuce' ? 1 : 1 });
       it.t0 = d[6]; it.t1 = d[7]; it.ax = (rnd() - .5) * 9; it.az = (rnd() - .5) * 9; it.ay = (rnd() > .5 ? 1 : -1) * (2 + rnd() * 3);
@@ -299,7 +320,7 @@
     parts.Onion.forEach(function (o) { rings = rings.concat(components(o.geo)); });
     for (var i = 0; i < 7 && rings.length; i++) {
       var rg = rings[i % rings.length].clone(); flatten(rg); centerGeo(rg);
-      var rs = (.45 + rnd() * .2) / maxDim(rg); rg.scale(rs, rs, rs);
+      var rs = (.32 + rnd() * .14) / maxDim(rg); rg.scale(rs, rs, rs);
       var it = place(rg, oniMat, -.9 + i * .3 + (rnd() - .5) * .2, .2 + (rnd() - .5) * .7, rnd() * 6.28);
       it.t0 = .44 + i * .014; it.t1 = it.t0 + .05; it.ax = (rnd() - .5) * 9; it.az = (rnd() - .5) * 9; it.ay = (rnd() - .5) * 6;
       items.push(it);
