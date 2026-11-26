@@ -60,7 +60,7 @@
   var key = new T.DirectionalLight(0xffe6c4, 2.1); key.position.set(3.2, 7, 4.2); key.castShadow = true;
   key.shadow.mapSize.set(mob ? 1024 : 2048, mob ? 1024 : 2048);
   var sc = key.shadow.camera; sc.left = -3.6; sc.right = 3.6; sc.top = 3.6; sc.bottom = -3.6; sc.near = 1; sc.far = 22;
-  key.shadow.bias = -.0005; key.shadow.normalBias = .02; key.shadow.radius = 4;
+  key.shadow.bias = -.0005; key.shadow.normalBias = .02; key.shadow.radius = mob ? 5 : 7;
   scene.add(key, key.target);
   var rim = new T.DirectionalLight(0x9cc0ff, .8); rim.position.set(-5, 3, -4); scene.add(rim);
   var warm = new T.PointLight(0xffb15c, 0, 6); warm.position.set(0, 1.4, 0); scene.add(warm);
@@ -68,6 +68,7 @@
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
   var root = new T.Group(); root.rotation.order = 'YXZ'; scene.add(root);
+  var steam;
 
   /* --- mappa delle altezze sopra la pita (per far appoggiare gli ingredienti) --- */
   var G = 200, SPAN = 4.6, CELL = SPAN / G, HF = new Float32Array(G * G);
@@ -271,7 +272,98 @@
   for (var s0 = 0; s0 < SN; s0++) sSeed.push([(rnd() - .5) * 2.4, (rnd() - .5) * 1.6, rnd()]);
   sGeo.setAttribute('position', new T.BufferAttribute(sPos, 3));
   var sMat = new T.PointsMaterial({ map: steamTex, size: 1.3, transparent: true, depthWrite: false, opacity: 0 });
-  var steam = new T.Points(sGeo, sMat); root.add(steam);
+  steam = new T.Points(sGeo, sMat); root.add(steam);
+
+  /* --- resa fotografica: profondità di campo, toni caldi, vignettatura, grana ---
+     scena → immagine con antialiasing; profondità → immagine a metà risoluzione;
+     un passaggio finale sfoca ciò che è fuori fuoco come un obiettivo.
+     Se il dispositivo non regge, si torna alla resa diretta. */
+  var post = null, postOn = true, focusDist = 8, slow = 0, frames = 0;
+  (function () {
+    var gl2 = renderer.capabilities.isWebGL2;
+    var mk = function (w, h, ms) {
+      var o = { minFilter: T.LinearFilter, magFilter: T.LinearFilter, format: T.RGBAFormat, type: gl2 ? T.HalfFloatType : T.UnsignedByteType };
+      var rt = ms && gl2 && T.WebGLMultisampleRenderTarget ? new T.WebGLMultisampleRenderTarget(w, h, o) : new T.WebGLRenderTarget(w, h, o);
+      if (rt.samples !== undefined) rt.samples = mob ? 2 : 4;
+      return rt;
+    };
+    var depthMat = new T.MeshDepthMaterial({ depthPacking: T.RGBADepthPacking, side: T.DoubleSide });
+    var quad = new T.Mesh(new T.PlaneGeometry(2, 2), new T.ShaderMaterial({
+      uniforms: {
+        tCol: { value: null }, tDep: { value: null }, res: { value: new T.Vector2(1, 1) }, focus: { value: 8 },
+        aper: { value: .45 }, maxB: { value: 9 }, near: { value: .1 }, far: { value: 100 }, time: { value: 0 }
+      },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+      fragmentShader: [
+        '#include <packing>',
+        'uniform sampler2D tCol; uniform sampler2D tDep; uniform vec2 res; uniform float focus, aper, maxB, near, far, time;',
+        'varying vec2 vUv;',
+        'float dist(vec2 uv){ float d = unpackRGBAToDepth(texture2D(tDep, uv)); return -perspectiveDepthToViewZ(d, near, far); }',
+        'float coc(float z){ return clamp(abs(z - focus) / z * aper * 6.0, 0.0, 1.0); }',
+        'float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + time) * 43758.5453); }',
+        'void main(){',
+        '  float c0 = coc(dist(vUv));',
+        '  vec4 acc = texture2D(tCol, vUv); float wsum = 1.0;',
+        '  float R = c0 * maxB;',
+        '  if (R > .5) {',
+        '    for (int i = 0; i < ' + (mob ? 14 : 22) + '; i++) {',
+        '      float fi = float(i) + .5, r = sqrt(fi / ' + (mob ? '14.0' : '22.0') + ') * R, a = fi * 2.39996;',
+        '      vec2 uv = vUv + vec2(cos(a), sin(a)) * r / res;',
+        '      float cs = coc(dist(uv)) * maxB;',
+        '      float w = smoothstep(r - 1.0, r + 1.0, max(cs, c0 * .5) + 1.0);',      // limita gli aloni sui bordi a fuoco
+        '      acc += texture2D(tCol, uv) * w; wsum += w;',
+        '    }',
+        '  }',
+        '  acc /= wsum;',
+        '  float a = acc.a; vec3 col = a > 0.001 ? acc.rgb / a : vec3(0.);',
+        '  col *= vec3(1.045, 1.0, .93);',                                   // luce calda da foto di cibo
+        '  col = LinearTosRGB(vec4(col, 1.)).rgb;',
+        '  col = mix(col, col * col * (3. - 2. * col), .22);',                 // un po\' di contrasto
+        '  float l = dot(col, vec3(.299, .587, .114)); col = mix(vec3(l), col, 1.07);',
+        '  vec2 q = vUv - .5; col *= mix(.82, 1., smoothstep(.85, .25, length(q * vec2(1.1, 1.))));',
+        '  col += (hash(vUv * res) - .5) * .028;',                            // grana
+        '  gl_FragColor = vec4(clamp(col, 0., 1.) * a, a);',
+        '}'
+      ].join('\n'),
+      depthTest: false, depthWrite: false, transparent: true, blending: T.CustomBlending,
+      blendSrc: T.OneFactor, blendDst: T.ZeroFactor
+    }));
+    quad.frustumCulled = false;
+    var qScene = new T.Scene(); qScene.add(quad);
+    var qCam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    post = {
+      col: mk(2, 2, true), dep: new T.WebGLRenderTarget(2, 2, { minFilter: T.NearestFilter, magFilter: T.NearestFilter }),
+      size: function () {
+        var v = renderer.getDrawingBufferSize(new T.Vector2());
+        this.col.setSize(v.x, v.y); var dq = mob ? 1 : 0; this.dep.setSize(Math.max(2, v.x >> dq), Math.max(2, v.y >> dq));
+        quad.material.uniforms.res.value.copy(v);
+        quad.material.uniforms.maxB.value = Math.round(v.y / (mob ? 110 : 95));
+      },
+      draw: function (time) {
+        var u = quad.material.uniforms;
+        u.tCol.value = this.col.texture; u.tDep.value = this.dep.texture; u.focus.value = focusDist;
+        u.near.value = cam.near; u.far.value = cam.far; u.time.value = time % 10;
+        renderer.setClearColor(0x000000, 0);
+        renderer.shadowMap.autoUpdate = true;
+        renderer.setRenderTarget(this.col); renderer.clear(); renderer.render(scene, cam);
+        // profondità (senza ombre, terreno e vapore)
+        renderer.shadowMap.autoUpdate = false;
+        var gv = ground.visible, sv = steam.visible; ground.visible = false; steam.visible = false;
+        scene.overrideMaterial = depthMat; renderer.setClearColor(0xffffff, 1);
+        renderer.setRenderTarget(this.dep); renderer.clear(); renderer.render(scene, cam);
+        scene.overrideMaterial = null; ground.visible = gv; steam.visible = sv; renderer.setClearColor(0x000000, 0);
+        renderer.shadowMap.autoUpdate = true;
+        renderer.setRenderTarget(null); renderer.clear(); renderer.render(qScene, qCam);
+      }
+    };
+  })();
+  function draw(time) {
+    var t0 = performance.now();
+    if (post && postOn) post.draw(time || 0); else renderer.render(scene, cam);
+    // se il dispositivo fatica (molti fotogrammi lenti), si torna alla resa diretta
+    if (postOn && ready && ++frames > 20) { if (performance.now() - t0 > 34) slow++; else slow = Math.max(0, slow - .5); if (slow > 25) postOn = false; }
+  }
+
 
   /* --- costruzione (dopo il caricamento dei modelli) --- */
   var ready = false, loader = new T.GLTFLoader();
@@ -328,7 +420,7 @@
 
     // patatine: una per una
     var fm = bake(r[2]), fries = components(fm[0].geo);
-    var friesMat = tuneMat(fm[0].mat, { color: [1.05, .74, .42], rough: .5, env: .35 });
+    var friesMat = tuneMat(fm[0].mat, { color: [1.0, .68, .36], rough: .55, env: .35 });
     friesMat.emissive = new T.Color(0x3a1a00); friesMat.emissiveIntensity = .25;
     var flen = fries.map(function (g) { g.computeBoundingBox(); var z = g.boundingBox.getSize(new T.Vector3()); return Math.max(z.x, z.y, z.z); });
     var fmed = flen.slice().sort(function (a, b) { return a - b; })[flen.length >> 1];
@@ -357,7 +449,7 @@
   var bar = document.getElementById('buildBar'), pop = document.getElementById('opaPop'), cap = document.querySelector('.build-cap');
   var B = [0, .12, .3, .5, .62, .74], curStep = -1, ps = 0, last = performance.now(), visible = false, nx = 0, ny = 0;
   addEventListener('pointermove', function (e) { nx = e.clientX / innerWidth - .5; ny = e.clientY / innerHeight - .5; }, { passive: true });
-  function resize() { var w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+  function resize() { var w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); if (post) post.size(); }
   addEventListener('resize', resize); resize();
 
   /* --- la piega: ogni punto (x,z) ad altezza h si avvolge attorno all'asse x;
@@ -385,7 +477,7 @@
   }
 
   function frame(p, time) {
-    if (!ready) { renderer.render(scene, cam); return; }
+    if (!ready) { draw(time); return; }
     // pita: scende ruotando e si scalda
     var pk = 1 - Math.pow(1 - seg(p, 0, .12), 3);
     pita.position.set(pitaPivot.x, pitaPivot.y + (1 - pk) * 5, pitaPivot.z); pita.rotation.set((1 - pk) * .5, (1 - pk) * -1.6, 0);
@@ -430,7 +522,8 @@
     var ty = lerp(.1, .3, ease(seg(p, .6, .86))) - lerp(0, .25, st);
     cam.position.set(r * Math.cos(el) * Math.sin(az), ty + r * Math.sin(el), r * Math.cos(el) * Math.cos(az));
     cam.lookAt(0, ty, 0);
-    renderer.render(scene, cam);
+    focusDist = cam.position.distanceTo(new T.Vector3(0, ty + .25 * (1 - st), 0));
+    draw(time);
   }
 
   function update(now) {
