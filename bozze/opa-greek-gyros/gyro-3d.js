@@ -192,10 +192,10 @@
     // superfici
     var cx = 0, cy = 0, cz = 0, cn = 0, minB = 1e9;
     for (j = 0, q = 0; j <= sy; j++) for (i = 0; i <= sx; i++, q++) {
-      var edge = Math.min(1, HH[q] * 8), curl = 0;
+      var ea = clamp((AA[q] - .5) * 2.5), edge = Math.min(1, HH[q] * 8) * ea, curl = 0;   // ea: sopra e sotto si chiudono sul bordo
       if (k.curl) { var du = i / sx - .5, dv = j / sy - .5, rr = (du * du + dv * dv) * 4; curl = k.curl * w * rr * rr; }
-      var yt = base[q] + HH[q] * disp + k.tmin * edge + curl * edge;
-      var yb = pitaMode ? -.07 * edge : base[q] + curl * edge * .9 + .002;
+      var yt = base[q] + HH[q] * disp * ea + k.tmin * edge + curl * edge;
+      var yb = pitaMode ? -.07 * edge : base[q] + curl * edge * .9 + .002 * ea;
       top[q * 3] = WX[q]; top[q * 3 + 1] = yt; top[q * 3 + 2] = WZ[q];
       bot[q * 3] = WX[q]; bot[q * 3 + 1] = yb; bot[q * 3 + 2] = WZ[q];
       if (AA[q] > .5) { cx += WX[q]; cy += yt; cz += WZ[q]; cn++; minB = Math.min(minB, yb); }
@@ -215,7 +215,7 @@
     var mT = makeMesh(top, uv, surfaceIndex(sx, sy, false), mt), mB = makeMesh(bot, uv, surfaceIndex(sx, sy, true), mb);
     mT.customDepthMaterial = mB.customDepthMaterial = depth;
     g.add(mT, mB); root.add(g);
-    objects.push({ mesh: mT, rest: restT, pv: pivot.clone() }, { mesh: mB, rest: restB, pv: pivot.clone() });
+    objects.push({ mesh: mT, rest: restT, pv: pivot.clone(), fill: !pitaMode }, { mesh: mB, rest: restB, pv: pivot.clone(), fill: !pitaMode });
     return { g: g, mat: mt, pivot: pivot };
   }
 
@@ -265,7 +265,7 @@
     geo.computeVertexNormals();
     var m = new T.Mesh(geo, friesMat); m.castShadow = m.receiveShadow = true;
     var g = new T.Group(); g.position.copy(piv); g.add(m); root.add(g);
-    objects.push({ mesh: m, rest: rest, pv: piv.clone() });
+    objects.push({ mesh: m, rest: rest, pv: piv.clone(), fill: true });
     return { g: g, pivot: piv, t0: t0, t1: t0 + .05, ax: (rnd() - .5) * 8, ay: (rnd() - .5) * 6, az: (rnd() - .5) * 8 };
   }
 
@@ -335,7 +335,7 @@
     objects.forEach(function (o) {
       var pa = o.mesh.geometry.attributes.position, arr = pa.array, rest = o.rest, pv = o.pv;
       for (var q = 0; q < arr.length; q += 3) {
-        bend(rest[q], rest[q + 2], rest[q + 1], f, tmp);
+        bend(rest[q], rest[q + 2], o.fill ? rest[q + 1] * (1 + f * 1.6) : rest[q + 1], f, tmp);   // il ripieno riempie la pita che si chiude
         arr[q] = tmp[0] - pv.x; arr[q + 1] = tmp[1] - pv.y; arr[q + 2] = tmp[2] - pv.z;
       }
       pa.needsUpdate = true; o.mesh.geometry.computeVertexNormals(); o.mesh.geometry.computeBoundingSphere();
